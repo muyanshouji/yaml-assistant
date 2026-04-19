@@ -1,0 +1,92 @@
+<idea-plugin>
+    <id>com.muyan.yaml-assistant</id>
+    <name>YAML Assistant</name>
+    <vendor email="muyan@example.com" url="https://github.com/muyanshouji">muyan</vendor>
+
+    <description><![CDATA[
+        <h2>YAML Assistant</h2>
+        <p>A powerful YAML viewing, formatting, and diff comparison tool for IntelliJ IDEA.</p>
+        <ul>
+            <li><b>Tree View</b> — View YAML as a structured tree</li>
+            <li><b>Format</b> — Beautify or minify YAML</li>
+            <li><b>Diff</b> — Compare two YAML files structurally</li>
+            <li><b>Convert</b> — YAML ↔ JSON bidirectional conversion</li>
+            <li><b>Path Copy</b> — Copy full YAML key path</li>
+        </ul>
+    ]]></description>
+
+    <!-- 插件依赖 -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.plugins.yaml</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Tool Window: YAML 树形查看面板 -->
+        <toolWindow id="YAML Assistant"
+                    anchor="right"
+                    icon="AllIcons.FileTypes.Yaml"
+                    factoryClass="com.muyan.yamlassistant.ui.YamlToolWindowFactory"/>
+
+        <!-- 插件设置页面 -->
+        <applicationConfigurable
+                parentId="tools"
+                instance="com.muyan.yamlassistant.settings.YamlAssistantConfigurable"
+                id="com.muyan.yamlassistant.settings"
+                displayName="YAML Assistant"/>
+
+        <!-- 应用级服务 -->
+        <applicationService
+                serviceImplementation="com.muyan.yamlassistant.settings.YamlAssistantSettings"/>
+
+        <!-- YAML 语法错误标注器 -->
+        <annotator language="yaml"
+                   implementationClass="com.muyan.yamlassistant.editor.YamlAnnotator"/>
+    </extensions>
+
+    <actions>
+        <!-- YAML Assistant 菜单组 -->
+        <group id="YamlAssistant.MenuGroup"
+               text="YAML Assistant"
+               description="YAML Assistant actions"
+               popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+
+            <!-- 查看 YAML 树 -->
+            <action id="YamlAssistant.ViewTree"
+                    class="com.muyan.yamlassistant.actions.ViewYamlTreeAction"
+                    text="View YAML Tree"
+                    description="View current YAML file as a tree structure"
+                    icon="AllIcons.Actions.ShowAsTree"/>
+
+            <!-- 格式化 YAML -->
+            <action id="YamlAssistant.Format"
+                    class="com.muyan.yamlassistant.actions.FormatYamlAction"
+                    text="Format YAML"
+                    description="Format and beautify current YAML file"
+                    icon="AllIcons.Actions.ReformatCode"/>
+
+            <!-- 比对 YAML -->
+            <action id="YamlAssistant.Compare"
+                    class="com.muyan.yamlassistant.actions.CompareYamlAction"
+                    text="Compare YAML Files"
+                    description="Compare two YAML files"
+                    icon="AllIcons.Actions.Diff"/>
+
+            <!-- YAML ↔ JSON 转换 -->
+            <action id="YamlAssistant.ConvertJson"
+                    class="com.muyan.yamlassistant.actions.ConvertYamlJsonAction"
+                    text="Convert YAML ↔ JSON"
+                    description="Convert between YAML and JSON formats"
+                    icon="AllIcons.FileTypes.Json"/>
+        </group>
+
+        <!-- 编辑器右键菜单 -->
+        <group id="YamlAssistant.EditorPopup"
+               text="YAML Assistant"
+               popup="true">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <reference ref="YamlAssistant.ViewTree"/>
+            <reference ref="YamlAssistant.Format"/>
+            <reference ref="YamlAssistant.ConvertJson"/>
+        </group>
+    </actions>
+</idea-plugin>
