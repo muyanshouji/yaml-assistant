@@ -21,3 +21,9 @@ Thumbs.db
 
 # Local git worktrees
 .worktrees/
+
+# Sandbox runtime project state
+sandbox-playground/.idea/workspace.xml
+sandbox-playground/.idea/tasks.xml
+sandbox-playground/.idea/usage.statistics.xml
+sandbox-playground/.idea/shelf/

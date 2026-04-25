@@ -8,7 +8,7 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * 插件设置界面 — 在 Settings → Tools → YAML Assistant 中显示。
+ * 插件设置界面 — 在 Settings → Tools → Config Assistant 中显示。
  *
  * 实现 Configurable 接口:
  * - createComponent(): 创建设置面板 UI
@@ -26,7 +26,7 @@ public class YamlAssistantConfigurable implements Configurable {
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "YAML Assistant";
+        return "Config Assistant";
     }
 
     @Nullable

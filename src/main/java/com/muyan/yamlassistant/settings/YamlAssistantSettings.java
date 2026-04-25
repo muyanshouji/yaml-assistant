@@ -16,8 +16,8 @@ import org.jetbrains.annotations.Nullable;
  * - 配置会自动序列化为 XML 存储在用户的 IDEA 配置目录中
  */
 @State(
-        name = "YamlAssistantSettings",
-        storages = @Storage("YamlAssistantSettings.xml")
+        name = "ConfigAssistantSettings",
+        storages = @Storage("ConfigAssistantSettings.xml")
 )
 public class YamlAssistantSettings implements PersistentStateComponent<YamlAssistantSettings.State> {
 

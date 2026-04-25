@@ -1,4 +1,4 @@
-name: Build YAML Assistant Plugin
+name: Build Config Assistant Plugin
 
 on:
   push:
@@ -25,14 +25,12 @@ jobs:
 
       - name: Build Plugin
         run: ./gradlew buildPlugin
-        working-directory: yaml-assistant
 
       - name: Run Tests
         run: ./gradlew test
-        working-directory: yaml-assistant
 
       - name: Upload Plugin Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: yaml-assistant-plugin
-          path: yaml-assistant/build/distributions/*.zip
+          name: config-assistant-plugin
+          path: build/distributions/*.zip

@@ -7,12 +7,14 @@ import com.muyan.yamlassistant.model.YamlNode;
 import com.muyan.yamlassistant.services.YamlConverterService;
 import com.muyan.yamlassistant.services.YamlFormatterService;
 import com.muyan.yamlassistant.services.YamlParserService;
+import com.muyan.yamlassistant.workspace.YamlViewState;
+import com.muyan.yamlassistant.workspace.YamlWorkspaceStateService;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 /**
- * YAML Assistant 核心服务单元测试
+ * Config Assistant 核心服务单元测试
  */
 public class YamlAssistantTest {
 
@@ -94,11 +96,181 @@ public class YamlAssistantTest {
     }
 
     @Test
+    public void testJsonToYamlPreservesIntegerNumbers() {
+        String json = "{\"age\":25,\"ratio\":2.5}";
+
+        String yaml = converterService.jsonToYaml(json);
+
+        assertTrue(yaml.contains("age: 25"));
+        assertFalse(yaml.contains("age: 25.0"));
+        assertTrue(yaml.contains("ratio: 2.5"));
+    }
+
+    @Test
     public void testIsJson() {
         assertTrue(converterService.isJson("{\"key\":\"value\"}"));
         assertTrue(converterService.isJson("[1,2,3]"));
         assertFalse(converterService.isJson("key: value"));
         assertFalse(converterService.isJson(null));
+    }
+
+    // ==================== Workspace State Tests ====================
+
+    @Test
+    public void testWorkspaceStateCreatesDefaultViewName() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+
+        YamlViewState first = service.createView("alpha: 1");
+        YamlViewState second = service.createView("beta: 2");
+
+        assertEquals("View 1", first.getName());
+        assertEquals("View 2", second.getName());
+        assertEquals(2, service.getViews().size());
+    }
+
+    @Test
+    public void testWorkspaceStateRestoresEmptyWorkspaceWithDefaultView() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+
+        service.ensureAtLeastOneView();
+
+        assertEquals(1, service.getViews().size());
+        assertEquals("View 1", service.getViews().get(0).getName());
+        assertEquals("", service.getViews().get(0).getContent());
+    }
+
+    @Test
+    public void testWorkspaceStateDeletesLastViewByReplacingIt() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        service.ensureAtLeastOneView();
+
+        String id = service.getViews().get(0).getId();
+        service.deleteView(id);
+
+        assertEquals(1, service.getViews().size());
+        assertNotEquals(id, service.getViews().get(0).getId());
+    }
+
+    @Test
+    public void testWorkspaceStateLoadStateNormalizesNullState() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+
+        service.loadState(null);
+
+        assertEquals(1, service.getViews().size());
+        assertEquals("View 1", service.getViews().get(0).getName());
+        assertEquals("", service.getViews().get(0).getContent());
+        assertNotNull(service.getViews().get(0).getId());
+    }
+
+    @Test
+    public void testWorkspaceStateLoadStateNormalizesRestoredViews() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlWorkspaceStateService.State restored = new YamlWorkspaceStateService.State();
+        restored.views = null;
+        restored.nextViewIndex = 0;
+
+        service.loadState(restored);
+
+        assertEquals(1, service.getViews().size());
+        assertEquals("View 1", service.getViews().get(0).getName());
+        assertEquals("", service.getViews().get(0).getContent());
+        assertNotNull(service.getViews().get(0).getId());
+    }
+
+    @Test
+    public void testWorkspaceStateLoadStatePreservesValidViewsAndRestoresNumbering() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlWorkspaceStateService.State restored = new YamlWorkspaceStateService.State();
+        restored.nextViewIndex = 1;
+        restored.views.add(new YamlViewState("kept-id", "View 4", "alpha: 1"));
+        restored.views.add(new YamlViewState(null, null, null));
+
+        service.loadState(restored);
+
+        assertEquals(2, service.getViews().size());
+        assertEquals("kept-id", service.getViews().get(0).getId());
+        assertEquals("View 4", service.getViews().get(0).getName());
+        assertEquals("alpha: 1", service.getViews().get(0).getContent());
+        assertNotNull(service.getViews().get(1).getId());
+        assertEquals("View 5", service.getViews().get(1).getName());
+        assertEquals("", service.getViews().get(1).getContent());
+
+        YamlViewState created = service.createView("beta: 2");
+        assertEquals("View 6", created.getName());
+    }
+
+    @Test
+    public void testValidateCompareSelectionRequiresDifferentViews() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlViewState view = service.createView("alpha: 1");
+
+        assertEquals(
+                "Please choose two different views.",
+                service.validateCompareSelection(view.getId(), view.getId(), parserService)
+        );
+    }
+
+    @Test
+    public void testValidateCompareSelectionRejectsInvalidLeftYaml() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlViewState left = service.createView("invalid: [unclosed");
+        YamlViewState right = service.createView("beta: 2");
+
+        String validation = service.validateCompareSelection(left.getId(), right.getId(), parserService);
+
+        assertNotNull(validation);
+        assertTrue(validation.startsWith("Left view is invalid:"));
+    }
+
+    @Test
+    public void testValidateCompareSelectionRejectsDeletedView() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlViewState left = service.createView("alpha: 1");
+        YamlViewState right = service.createView("beta: 2");
+
+        service.deleteView(right.getId());
+
+        assertEquals(
+                "Selected view no longer exists.",
+                service.validateCompareSelection(left.getId(), right.getId(), parserService)
+        );
+    }
+
+    @Test
+    public void testValidateCompareSelectionRejectsInvalidRightYaml() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlViewState left = service.createView("alpha: 1");
+        YamlViewState right = service.createView("invalid: [unclosed");
+
+        String validation = service.validateCompareSelection(left.getId(), right.getId(), parserService);
+
+        assertNotNull(validation);
+        assertTrue(validation.startsWith("Right view is invalid:"));
+    }
+
+    @Test
+    public void testValidateCompareSelectionAcceptsTwoValidViews() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlViewState left = service.createView("alpha: 1");
+        YamlViewState right = service.createView("beta: 2");
+
+        assertNull(service.validateCompareSelection(left.getId(), right.getId(), parserService));
+    }
+
+    @Test
+    public void testStoredViewsCanBeValidatedAndDiffedByVersion() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlViewState versionOne = service.createView("name: test\nversion: 1");
+        YamlViewState versionTwo = service.createView("name: test\nversion: 2");
+
+        assertNull(service.validateCompareSelection(versionOne.getId(), versionTwo.getId(), parserService));
+
+        YamlDiffResult result = diffService.compare(versionOne.getContent(), versionTwo.getContent());
+
+        assertTrue(result.hasDifferences());
+        assertEquals(1, result.getDiffCount());
+        assertEquals("version", result.getDiffs().get(0).getPath());
     }
 
     // ==================== Diff Tests ====================

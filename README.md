@@ -1,6 +1,6 @@
-# YAML Assistant - IntelliJ IDEA 插件
+# Config Assistant - IntelliJ IDEA 插件
 
-> 一个用于 **查看、编辑、格式化、比对 YAML** 的 IntelliJ IDEA 插件，灵感来自 JSON Assistant。
+> 一个用于 **查看、编辑、格式化、比对配置文件 YAML** 的 IntelliJ IDEA 插件，灵感来自 JSON Assistant。
 
 ---
 
@@ -20,7 +20,7 @@
 
 ## 项目简介
 
-YAML Assistant 是一个 IntelliJ IDEA 插件，提供以下能力：
+Config Assistant 是一个 IntelliJ IDEA 插件，提供以下能力：
 - YAML 文件的 **结构化树形查看**
 - YAML 文件的 **格式化与美化**
 - 两个 YAML 文件的 **差异比对（Diff）**
@@ -170,7 +170,7 @@ IDEA 插件的核心概念：
 ### 目录结构
 
 ```
-yaml-assistant/
+config-assistant/
 ├── build.gradle.kts              # Gradle 构建配置
 ├── settings.gradle.kts           # Gradle 设置
 ├── gradle.properties             # 版本配置
@@ -314,7 +314,7 @@ SnakeYAML 解析 → 设置 DumperOptions → 重新输出
 
 ```
 plugin.xml 中声明:
-  <toolWindow id="YAML Assistant" ...
+  <toolWindow id="Config Assistant" ...
       factoryClass="com.muyan.yamlassistant.ui.YamlToolWindowFactory"/>
        ↓
 IDEA 启动时读取 plugin.xml
@@ -338,8 +338,8 @@ IDEA 启动时读取 plugin.xml
 ### 本地运行
 ```bash
 # 1. 克隆项目
-git clone https://github.com/muyanshouji/yaml-assistant.git
-cd yaml-assistant
+git clone https://github.com/muyanshouji/config-assistant.git
+cd config-assistant
 
 # 2. 用 IDEA 打开项目（File → Open → 选择项目根目录）
 
@@ -350,7 +350,7 @@ cd yaml-assistant
 
 # 5. 构建插件安装包
 ./gradlew buildPlugin
-# 产物在 build/distributions/yaml-assistant-*.zip
+# 产物在 build/distributions/config-assistant-*.zip
 ```
 
 ---

@@ -2,8 +2,15 @@ package com.muyan.yamlassistant.services;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * YAML ↔ JSON 转换服务。
@@ -19,7 +26,10 @@ public class YamlConverterService {
 
     public YamlConverterService() {
         this.yaml = new Yaml();
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
+        this.gson = new GsonBuilder()
+                .setPrettyPrinting()
+                .setObjectToNumberStrategy(ToNumberPolicy.BIG_DECIMAL)
+                .create();
     }
 
     /**
@@ -41,7 +51,7 @@ public class YamlConverterService {
      */
     @SuppressWarnings("unchecked")
     public String jsonToYaml(String jsonText) {
-        Object data = gson.fromJson(jsonText, Object.class);
+        Object data = normalizeNumbers(gson.fromJson(jsonText, Object.class));
 
         DumperOptions options = new DumperOptions();
         options.setIndent(2);
@@ -50,6 +60,30 @@ public class YamlConverterService {
 
         Yaml dumper = new Yaml(options);
         return dumper.dump(data);
+    }
+
+    private Object normalizeNumbers(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<Object, Object> normalized = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                normalized.put(entry.getKey(), normalizeNumbers(entry.getValue()));
+            }
+            return normalized;
+        }
+
+        if (value instanceof List<?> list) {
+            List<Object> normalized = new ArrayList<>(list.size());
+            for (Object item : list) {
+                normalized.add(normalizeNumbers(item));
+            }
+            return normalized;
+        }
+
+        if (value instanceof BigDecimal decimal && decimal.scale() <= 0) {
+            return decimal.toBigIntegerExact();
+        }
+
+        return value;
     }
 
     /**

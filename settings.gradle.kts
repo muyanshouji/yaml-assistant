@@ -1,1 +1,1 @@
-rootProject.name = "yaml-assistant"
+rootProject.name = "config-assistant"

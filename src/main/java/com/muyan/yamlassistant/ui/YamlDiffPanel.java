@@ -20,15 +20,20 @@ public class YamlDiffPanel {
     private final JPanel mainPanel;
     private final JTable diffTable;
     private final DefaultTableModel tableModel;
+    private final JLabel comparisonLabel;
     private final JLabel summaryLabel;
 
     public YamlDiffPanel() {
         mainPanel = new JPanel(new BorderLayout());
 
-        // 摘要标签
+        JPanel headerPanel = new JPanel(new GridLayout(2, 1));
+        comparisonLabel = new JLabel("No views selected");
+        comparisonLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 0, 5));
         summaryLabel = new JLabel("No comparison performed");
-        summaryLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        mainPanel.add(summaryLabel, BorderLayout.NORTH);
+        summaryLabel.setBorder(BorderFactory.createEmptyBorder(0, 5, 5, 5));
+        headerPanel.add(comparisonLabel);
+        headerPanel.add(summaryLabel);
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
 
         // 差异表格
         String[] columns = {"Path", "Type", "Left Value", "Right Value"};
@@ -50,7 +55,12 @@ public class YamlDiffPanel {
      * 更新差异展示
      */
     public void updateDiff(YamlDiffResult result) {
+        updateDiff(null, result);
+    }
+
+    public void updateDiff(String comparisonLabelText, YamlDiffResult result) {
         tableModel.setRowCount(0);
+        comparisonLabel.setText(comparisonLabelText != null ? comparisonLabelText : "No views selected");
         summaryLabel.setText(result.getSummary());
 
         List<DiffEntry> diffs = result.getDiffs();

@@ -1,0 +1,13 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: config-assistant-sandbox
+features:
+  compare: true
+  format: true
+  multiView: true
+list:
+  - alpha
+  - beta
+  - gamma

@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.muyan"
-version = "0.1.0"
+version = "1.0.0"
 
 repositories {
     mavenCentral()
@@ -50,16 +50,20 @@ tasks {
         sinceBuild.set("233")       // 2023.3+
         untilBuild.set("243.*")     // 到 2024.3.x
         pluginDescription.set("""
-            <h2>YAML Assistant</h2>
-            <p>A powerful YAML toolkit for IntelliJ IDEA.</p>
+            <h2>Config Assistant</h2>
+            <p>A focused config workspace for viewing, formatting, diffing, and converting YAML in IntelliJ IDEA.</p>
             <ul>
-                <li>Tree view for YAML files</li>
-                <li>YAML formatting and beautification</li>
-                <li>YAML diff comparison</li>
+                <li>Project-level multi-view config workspace</li>
+                <li>YAML formatting and validation</li>
+                <li>Native IntelliJ diff for saved views</li>
                 <li>YAML ↔ JSON conversion</li>
-                <li>YAML path copy</li>
+                <li>Editor-first config utilities</li>
             </ul>
         """.trimIndent())
+    }
+
+    runIde {
+        args = listOf(file("sandbox-playground").absolutePath)
     }
 
     signPlugin {
