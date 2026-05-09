@@ -1,7 +1,12 @@
 package com.muyan.yamlassistant.services;
 
 import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.nodes.Node;
+
+import java.io.StringReader;
+import java.io.StringWriter;
 
 /**
  * YAML 格式化服务 — 美化或压缩 YAML 文本。
@@ -43,24 +48,33 @@ public class YamlFormatterService {
      * @return 格式化后的 YAML 文本
      */
     public String format(String yamlText, int indent, int lineWidth, DumperOptions.FlowStyle flowStyle) {
-        // 1. 解析
-        Yaml parser = new Yaml();
-        Object data = parser.load(yamlText);
+        // Parse the YAML AST instead of plain Java objects so comments survive formatting.
+        LoaderOptions loaderOptions = new LoaderOptions();
+        loaderOptions.setProcessComments(true);
+        Yaml parser = new Yaml(loaderOptions);
+        Node node = parser.compose(new StringReader(yamlText));
 
-        if (data == null) {
+        if (node == null) {
             return yamlText;
         }
 
         // 2. 配置输出选项
         DumperOptions options = new DumperOptions();
         options.setIndent(Math.max(indent, 1));
+        if (flowStyle == DumperOptions.FlowStyle.BLOCK && indent >= 2) {
+            options.setIndicatorIndent(indent);
+            options.setIndentWithIndicator(true);
+        }
         options.setWidth(lineWidth);
         options.setDefaultFlowStyle(flowStyle);
         options.setPrettyFlow(true);
         options.setDefaultScalarStyle(DumperOptions.ScalarStyle.PLAIN);
+        options.setProcessComments(true);
 
         // 3. 重新输出
         Yaml dumper = new Yaml(options);
-        return dumper.dump(data);
+        StringWriter writer = new StringWriter();
+        dumper.serialize(node, writer);
+        return writer.toString();
     }
 }

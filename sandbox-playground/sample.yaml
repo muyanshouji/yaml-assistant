@@ -2,7 +2,8 @@ server:
   port: 8080
 spring:
   application:
-    name: config-assistant-sandbox
+    name: config-assistant-sandbox # 2323232
+# 哈哈哈哈哈
 features:
   compare: true
   format: true

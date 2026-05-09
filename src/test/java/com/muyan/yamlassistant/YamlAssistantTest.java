@@ -72,6 +72,26 @@ public class YamlAssistantTest {
     }
 
     @Test
+    public void testBeautifyYamlPreservesComments() {
+        String yaml = "# top comment\nserver: # inline comment\n  port: 8080\n";
+
+        String result = formatterService.beautify(yaml);
+
+        assertTrue(result.contains("# top comment"));
+        assertTrue(result.contains("# inline comment"));
+        assertTrue(result.contains("port: 8080"));
+    }
+
+    @Test
+    public void testBeautifyYamlKeepsSequenceItemsIndented() {
+        String yaml = "list:\n- alpha\n- beta\n- gamma\n";
+
+        String result = formatterService.beautify(yaml);
+
+        assertTrue(result.contains("list:\n  - alpha\n  - beta\n  - gamma\n"));
+    }
+
+    @Test
     public void testMinifyYaml() {
         String yaml = "name: test\nversion: 1.0\n";
         String result = formatterService.minify(yaml);
