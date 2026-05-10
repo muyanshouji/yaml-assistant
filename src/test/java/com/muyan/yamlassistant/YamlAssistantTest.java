@@ -143,8 +143,8 @@ public class YamlAssistantTest {
         YamlViewState first = service.createView("alpha: 1");
         YamlViewState second = service.createView("beta: 2");
 
-        assertEquals("View 1", first.getName());
-        assertEquals("View 2", second.getName());
+        assertEquals("View", first.getName());
+        assertEquals("View 1", second.getName());
         assertEquals(2, service.getViews().size());
     }
 
@@ -155,7 +155,7 @@ public class YamlAssistantTest {
         service.ensureAtLeastOneView();
 
         assertEquals(1, service.getViews().size());
-        assertEquals("View 1", service.getViews().get(0).getName());
+        assertEquals("View", service.getViews().get(0).getName());
         assertEquals("", service.getViews().get(0).getContent());
     }
 
@@ -178,7 +178,7 @@ public class YamlAssistantTest {
         service.loadState(null);
 
         assertEquals(1, service.getViews().size());
-        assertEquals("View 1", service.getViews().get(0).getName());
+        assertEquals("View", service.getViews().get(0).getName());
         assertEquals("", service.getViews().get(0).getContent());
         assertNotNull(service.getViews().get(0).getId());
     }
@@ -193,7 +193,7 @@ public class YamlAssistantTest {
         service.loadState(restored);
 
         assertEquals(1, service.getViews().size());
-        assertEquals("View 1", service.getViews().get(0).getName());
+        assertEquals("View", service.getViews().get(0).getName());
         assertEquals("", service.getViews().get(0).getContent());
         assertNotNull(service.getViews().get(0).getId());
     }
@@ -210,14 +210,49 @@ public class YamlAssistantTest {
 
         assertEquals(2, service.getViews().size());
         assertEquals("kept-id", service.getViews().get(0).getId());
-        assertEquals("View 4", service.getViews().get(0).getName());
+        assertEquals("View", service.getViews().get(0).getName());
         assertEquals("alpha: 1", service.getViews().get(0).getContent());
         assertNotNull(service.getViews().get(1).getId());
-        assertEquals("View 5", service.getViews().get(1).getName());
+        assertEquals("View 1", service.getViews().get(1).getName());
         assertEquals("", service.getViews().get(1).getContent());
 
         YamlViewState created = service.createView("beta: 2");
-        assertEquals("View 6", created.getName());
+        assertEquals("View 2", created.getName());
+    }
+
+    @Test
+    public void testWorkspaceStateMigratesLegacySequentialViewNames() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlWorkspaceStateService.State restored = new YamlWorkspaceStateService.State();
+        restored.views.add(new YamlViewState("id-1", "View 7", "alpha: 1"));
+        restored.views.add(new YamlViewState("id-2", "View 8", "beta: 2"));
+        restored.views.add(new YamlViewState("id-3", "View 9", "gamma: 3"));
+
+        service.loadState(restored);
+
+        assertEquals("View", service.getViews().get(0).getName());
+        assertEquals("View 1", service.getViews().get(1).getName());
+        assertEquals("View 2", service.getViews().get(2).getName());
+
+        YamlViewState created = service.createView("delta: 4");
+        assertEquals("View 3", created.getName());
+    }
+
+    @Test
+    public void testWorkspaceStateCreateViewUsesCurrentMaxIndexAfterDelete() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+
+        YamlViewState first = service.createView("alpha: 1");
+        YamlViewState second = service.createView("beta: 2");
+        YamlViewState third = service.createView("gamma: 3");
+        service.deleteView(third.getId());
+
+        YamlViewState recreated = service.createView("delta: 4");
+
+        assertEquals("View 2", recreated.getName());
+        assertEquals(3, service.getViews().size());
+        assertEquals(first.getName(), service.getViews().get(0).getName());
+        assertEquals(second.getName(), service.getViews().get(1).getName());
     }
 
     @Test

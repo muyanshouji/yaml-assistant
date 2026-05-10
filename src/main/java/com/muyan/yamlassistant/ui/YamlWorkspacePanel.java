@@ -4,6 +4,7 @@ import com.intellij.diff.DiffContentFactory;
 import com.intellij.diff.DiffManager;
 import com.intellij.diff.requests.SimpleDiffRequest;
 import com.intellij.icons.AllIcons;
+import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.DumbAwareAction;
@@ -16,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.yaml.YAMLFileType;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.plaf.basic.BasicTabbedPaneUI;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -28,30 +30,20 @@ import java.util.Map;
 
 public class YamlWorkspacePanel {
 
-    private static final Color SHELL_BACKGROUND = new Color(0x35384A);
-    private static final Color VIEW_BAR_BACKGROUND = new Color(0x323649);
-    private static final Color VIEW_TAB_BACKGROUND = new Color(0x3A3F55);
-    private static final Color VIEW_TAB_BACKGROUND_SELECTED = new Color(0x404762);
-    private static final Color TEXT_PRIMARY = new Color(0xD6D9E3);
-    private static final Color TEXT_SECONDARY = new Color(0xAEB6C9);
-    private static final Color TAB_SELECTION = new Color(0x4FA3FF);
-    private static final Color VIEW_TAB_SEPARATOR = new Color(0x4B5067);
-    private static final Color ACTION_BUTTON_BACKGROUND = new Color(0x373C52);
-    private static final Color ACTION_BUTTON_BACKGROUND_HOVER = new Color(0x434965);
     private static final int VIEW_TAB_HEIGHT = 24;
-    private static final int VIEW_TAB_MIN_WIDTH = 60;
-    private static final int VIEW_TAB_SCROLL_GUTTER = 3;
-    private static final int VIEW_TAB_SCROLLBAR_HEIGHT = 8;
-    private static final float VIEW_TAB_FONT_SIZE = 11f;
+    private static final int VIEW_TAB_WIDTH = 88;
+    private static final int VIEW_TAB_SCROLL_GUTTER = 0;
+    private static final int VIEW_TAB_SCROLLBAR_HEIGHT = 0;
+    private static final float VIEW_TAB_FONT_SIZE = 12f;
+    private static final int CLOSE_BUTTON_SIZE = 14;
+    private static final int ADD_BUTTON_SIZE = 24;
+    private static final int ADD_ICON_SIZE = 10;
 
     private final JPanel mainPanel;
     private final JPanel topBarPanel;
-    private final JPanel workspaceHeaderPanel;
     private final JPanel tabsRowPanel;
-    private final JLabel workspaceTitleLabel;
     private final JPanel viewTabsPanel;
     private final JScrollPane viewTabsScrollPane;
-    private final JPanel actionButtonsPanel;
     private final JButton addViewButton;
     private final JTabbedPane tabbedPane;
     private final YamlWorkspaceStateService stateService;
@@ -68,16 +60,13 @@ public class YamlWorkspacePanel {
     public YamlWorkspacePanel(Project project, Runnable hideWorkspaceHandler) {
         mainPanel = new JPanel(new BorderLayout());
         topBarPanel = new JPanel();
-        workspaceHeaderPanel = new JPanel();
         tabsRowPanel = new JPanel();
-        workspaceTitleLabel = new JLabel("Workspace");
         viewTabsPanel = new JPanel();
         viewTabsScrollPane = new JScrollPane(
                 viewTabsPanel,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
         );
-        actionButtonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         tabbedPane = new JBTabbedPane();
         this.project = project;
         this.stateService = YamlWorkspaceStateService.getInstance(project);
@@ -126,16 +115,13 @@ public class YamlWorkspacePanel {
 
         mainPanel = new JPanel(new BorderLayout());
         topBarPanel = new JPanel();
-        workspaceHeaderPanel = new JPanel();
         tabsRowPanel = new JPanel();
-        workspaceTitleLabel = new JLabel("Workspace");
         viewTabsPanel = new JPanel();
         viewTabsScrollPane = new JScrollPane(
                 viewTabsPanel,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
         );
-        actionButtonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         tabbedPane = new JBTabbedPane();
         addViewButton = createAddViewButton(newViewAction);
         initializeUi();
@@ -156,21 +142,17 @@ public class YamlWorkspacePanel {
         int tabsScrollHeight = VIEW_TAB_HEIGHT
                 + VIEW_TAB_SCROLL_GUTTER
                 + VIEW_TAB_SCROLLBAR_HEIGHT;
+        Color shellBackground = getShellBackground();
+        Color viewBarBackground = getViewBarBackground();
 
-        mainPanel.setBackground(SHELL_BACKGROUND);
-        topBarPanel.setBackground(VIEW_BAR_BACKGROUND);
-        topBarPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 1, 0, VIEW_TAB_SEPARATOR),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
-        workspaceHeaderPanel.setBackground(VIEW_BAR_BACKGROUND);
-        tabsRowPanel.setBackground(VIEW_BAR_BACKGROUND);
-        workspaceTitleLabel.setForeground(TEXT_PRIMARY);
-        workspaceTitleLabel.setFont(workspaceTitleLabel.getFont().deriveFont(Font.BOLD, 12f));
-        viewTabsPanel.setBackground(VIEW_BAR_BACKGROUND);
+        mainPanel.setBackground(shellBackground);
+        topBarPanel.setBackground(viewBarBackground);
+        topBarPanel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        tabsRowPanel.setBackground(viewBarBackground);
+        viewTabsPanel.setBackground(viewBarBackground);
         viewTabsPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, VIEW_TAB_SCROLL_GUTTER, 0));
         viewTabsPanel.setLayout(new BoxLayout(viewTabsPanel, BoxLayout.X_AXIS));
-        viewTabsScrollPane.setBackground(VIEW_BAR_BACKGROUND);
+        viewTabsScrollPane.setBackground(viewBarBackground);
         viewTabsScrollPane.setBorder(BorderFactory.createEmptyBorder());
         viewTabsScrollPane.setOpaque(false);
         viewTabsScrollPane.getViewport().setOpaque(false);
@@ -179,83 +161,56 @@ public class YamlWorkspacePanel {
         viewTabsScrollPane.setPreferredSize(new Dimension(240, tabsScrollHeight));
         viewTabsScrollPane.setMinimumSize(new Dimension(120, tabsScrollHeight));
         viewTabsScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, tabsScrollHeight));
-        actionButtonsPanel.setBackground(VIEW_BAR_BACKGROUND);
-        tabbedPane.setBackground(SHELL_BACKGROUND);
-        tabbedPane.setForeground(TEXT_PRIMARY);
+        tabbedPane.setBackground(shellBackground);
+        tabbedPane.setForeground(getPrimaryTextColor());
         tabbedPane.setBorder(BorderFactory.createEmptyBorder());
         tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         tabbedPane.setUI(new HiddenTabsUI());
     }
 
     private void buildTopBar() {
-        topBarPanel.setLayout(new BoxLayout(topBarPanel, BoxLayout.Y_AXIS));
-        workspaceHeaderPanel.setLayout(new BoxLayout(workspaceHeaderPanel, BoxLayout.X_AXIS));
+        topBarPanel.setLayout(new BorderLayout());
         tabsRowPanel.setLayout(new BoxLayout(tabsRowPanel, BoxLayout.X_AXIS));
 
-        workspaceHeaderPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        tabsRowPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        workspaceTitleLabel.setAlignmentY(Component.CENTER_ALIGNMENT);
-        workspaceHeaderPanel.setAlignmentY(Component.CENTER_ALIGNMENT);
         tabsRowPanel.setAlignmentY(Component.CENTER_ALIGNMENT);
         viewTabsScrollPane.setAlignmentY(Component.CENTER_ALIGNMENT);
-        actionButtonsPanel.setAlignmentY(Component.CENTER_ALIGNMENT);
         addViewButton.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        populateActionButtons();
-
-        workspaceHeaderPanel.add(workspaceTitleLabel);
-        workspaceHeaderPanel.add(Box.createHorizontalStrut(10));
-        workspaceHeaderPanel.add(actionButtonsPanel);
-        workspaceHeaderPanel.add(Box.createHorizontalGlue());
-
         tabsRowPanel.add(viewTabsScrollPane);
-        tabsRowPanel.add(Box.createHorizontalStrut(6));
-        tabsRowPanel.add(addViewButton);
-        tabsRowPanel.add(Box.createHorizontalGlue());
-
-        topBarPanel.add(workspaceHeaderPanel);
-        topBarPanel.add(Box.createVerticalStrut(4));
-        topBarPanel.add(tabsRowPanel);
+        topBarPanel.add(tabsRowPanel, BorderLayout.CENTER);
     }
 
-    private void populateActionButtons() {
-        actionButtonsPanel.removeAll();
-        for (WorkspaceToolbarAction action : workspaceActions) {
-            actionButtonsPanel.add(createActionButton(action));
-        }
-    }
-
-    private JButton createActionButton(WorkspaceToolbarAction action) {
-        JButton button = new JButton(action.getTemplatePresentation().getIcon());
+    private JButton createAddViewButton(WorkspaceToolbarAction action) {
+        JButton button = new AddViewButton();
         button.setToolTipText(action.getTemplatePresentation().getText());
         button.setFocusable(false);
         button.setOpaque(true);
         button.setContentAreaFilled(true);
         button.setBorderPainted(false);
-        button.setBackground(ACTION_BUTTON_BACKGROUND);
-        button.setPreferredSize(new Dimension(26, 26));
+        button.setBackground(getViewTabBackground());
+        button.setForeground(getPrimaryTextColor());
+        button.setPreferredSize(new Dimension(ADD_BUTTON_SIZE, VIEW_TAB_HEIGHT));
+        button.setMinimumSize(new Dimension(ADD_BUTTON_SIZE, VIEW_TAB_HEIGHT));
+        button.setMaximumSize(new Dimension(ADD_BUTTON_SIZE, VIEW_TAB_HEIGHT));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(VIEW_TAB_SEPARATOR),
-                BorderFactory.createEmptyBorder(4, 4, 4, 4)
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, 2, 0, getViewTabBackground()),
+                        BorderFactory.createMatteBorder(0, 0, 0, 1, getViewTabSeparatorColor())
+                ),
+                BorderFactory.createEmptyBorder(0, 0, 2, 0)
         ));
         button.addActionListener(event -> action.run());
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent event) {
-                button.setBackground(ACTION_BUTTON_BACKGROUND_HOVER);
+                button.setBackground(getActionButtonHoverBackground());
             }
 
             @Override
             public void mouseExited(MouseEvent event) {
-                button.setBackground(ACTION_BUTTON_BACKGROUND);
+                button.setBackground(getViewTabBackground());
             }
         });
-        return button;
-    }
-
-    private JButton createAddViewButton(WorkspaceToolbarAction action) {
-        JButton button = createActionButton(action);
-        button.setPreferredSize(new Dimension(VIEW_TAB_HEIGHT, VIEW_TAB_HEIGHT));
         return button;
     }
 
@@ -263,7 +218,6 @@ public class YamlWorkspacePanel {
         List<WorkspaceToolbarAction> actions = new ArrayList<>();
         actions.add(new WorkspaceToolbarAction("Compare", AllIcons.Actions.Diff, this::compareViews));
         actions.add(new WorkspaceToolbarAction("Format", AllIcons.Actions.ReformatCode, this::formatCurrentView));
-        actions.add(new WorkspaceToolbarAction("Delete Current View", AllIcons.General.Remove, this::deleteCurrentView));
         return Collections.unmodifiableList(actions);
     }
 
@@ -351,8 +305,29 @@ public class YamlWorkspacePanel {
             return;
         }
 
-        stateService.deleteView(metadata.getViewId());
-        rebuildViewTabs(tabbedPane.getTabCount() > 1 ? Math.max(0, selectedIndex - 1) : null);
+        deleteView(metadata.getViewId(), selectedIndex);
+    }
+
+    private void deleteView(String viewId, int tabIndex) {
+        if (stateService.getViews().size() <= 1) {
+            return;
+        }
+
+        if (tabIndex == 0) {
+            return;
+        }
+
+        int selectedIndex = tabbedPane.getSelectedIndex();
+        stateService.deleteView(viewId);
+
+        int preferredSelection = selectedIndex;
+        if (tabIndex < selectedIndex) {
+            preferredSelection = selectedIndex - 1;
+        } else if (tabIndex == selectedIndex) {
+            preferredSelection = Math.max(0, selectedIndex - 1);
+        }
+
+        rebuildViewTabs(preferredSelection);
     }
 
     JTabbedPane getTabbedPane() {
@@ -368,9 +343,10 @@ public class YamlWorkspacePanel {
         for (YamlViewState view : stateService.getViews()) {
             String title = getDisplayName(view, viewIndex + 1);
             addViewTab(view, title);
-            addViewButton(title, viewIndex);
+            addViewChip(view, title, viewIndex);
             viewIndex++;
         }
+        viewTabsPanel.add(addViewButton);
 
         if (preferredSelection != null && preferredSelection < tabbedPane.getTabCount()) {
             tabbedPane.setSelectedIndex(preferredSelection);
@@ -405,49 +381,21 @@ public class YamlWorkspacePanel {
         return name;
     }
 
-    private void addViewButton(String title, int tabIndex) {
-        JToggleButton button = new JToggleButton(title);
-        button.setFocusable(false);
-        button.setOpaque(true);
-        button.setContentAreaFilled(true);
-        button.setBackground(VIEW_TAB_BACKGROUND);
-        button.setForeground(TEXT_SECONDARY);
-        button.setFont(button.getFont().deriveFont(Font.PLAIN, VIEW_TAB_FONT_SIZE));
-        button.setMargin(new Insets(0, 0, 0, 0));
-        button.setPreferredSize(new Dimension(Math.max(VIEW_TAB_MIN_WIDTH, title.length() * 7 + 18), VIEW_TAB_HEIGHT));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 0, 2, 0, SHELL_BACKGROUND),
-                        BorderFactory.createMatteBorder(0, 0, 0, 1, VIEW_TAB_SEPARATOR)
-                ),
-                BorderFactory.createEmptyBorder(2, 8, 2, 8)
-        ));
-        button.addActionListener(event -> tabbedPane.setSelectedIndex(tabIndex));
-        viewTabsPanel.add(button);
+    private void addViewChip(YamlViewState view, String title, int tabIndex) {
+        boolean closable = tabIndex > 0 && stateService.getViews().size() > 1;
+        viewTabsPanel.add(new ViewTabChip(view.getId(), title, tabIndex, closable));
     }
 
     JPanel getTopBarPanel() {
         return topBarPanel;
     }
 
-    JPanel getWorkspaceHeaderPanel() {
-        return workspaceHeaderPanel;
-    }
-
     JPanel getTabsRowPanel() {
         return tabsRowPanel;
     }
 
-    JLabel getWorkspaceTitleLabel() {
-        return workspaceTitleLabel;
-    }
-
     JPanel getViewTabsPanel() {
         return viewTabsPanel;
-    }
-
-    JPanel getActionButtonsPanel() {
-        return actionButtonsPanel;
     }
 
     JButton getAddViewButton() {
@@ -458,25 +406,282 @@ public class YamlWorkspacePanel {
         return viewTabsScrollPane;
     }
 
+    AnAction[] getToolWindowTitleActions() {
+        return workspaceActions.toArray(AnAction[]::new);
+    }
+
     private void updateViewTabSelection() {
         int selectedIndex = tabbedPane.getSelectedIndex();
         Component[] components = viewTabsPanel.getComponents();
-        for (int index = 0; index < components.length; index++) {
-            if (!(components[index] instanceof JToggleButton button)) {
+        int tabIndex = 0;
+        for (Component component : components) {
+            if (!(component instanceof ViewTabChip chip)) {
                 continue;
             }
 
-            boolean selected = index == selectedIndex;
-            button.setSelected(selected);
-            button.setBackground(selected ? VIEW_TAB_BACKGROUND_SELECTED : VIEW_TAB_BACKGROUND);
-            button.setForeground(selected ? TEXT_PRIMARY : TEXT_SECONDARY);
-            button.setBorder(BorderFactory.createCompoundBorder(
+            chip.applySelection(tabIndex == selectedIndex);
+            tabIndex++;
+        }
+
+        addViewButton.setBackground(getViewTabBackground());
+    }
+
+    private Color getShellBackground() {
+        Color background = UIManager.getColor("EditorPane.background");
+        if (background != null) {
+            return background;
+        }
+
+        background = UIManager.getColor("Panel.background");
+        return background != null ? background : new Color(0x35384A);
+    }
+
+    private Color getViewBarBackground() {
+        Color background = UIManager.getColor("ToolWindow.Header.background");
+        if (background != null) {
+            return background;
+        }
+
+        return getShellBackground();
+    }
+
+    private Color getViewTabBackground() {
+        return getViewBarBackground();
+    }
+
+    private Color getSelectedViewTabBackground() {
+        return mix(getViewBarBackground(), getShellBackground(), 0.82f);
+    }
+
+    private Color getPrimaryTextColor() {
+        Color color = UIManager.getColor("Label.foreground");
+        return color != null ? color : new Color(0xD6D9E3);
+    }
+
+    private Color getSecondaryTextColor() {
+        return withAlpha(getPrimaryTextColor(), 0.72f);
+    }
+
+    private Color getSelectionColor() {
+        Color color = UIManager.getColor("TabbedPane.underlineColor");
+        if (color != null) {
+            return color;
+        }
+
+        color = UIManager.getColor("Focus.color");
+        return color != null ? color : new Color(0x4FA3FF);
+    }
+
+    private Color getViewTabSeparatorColor() {
+        Color color = UIManager.getColor("Component.borderColor");
+        if (color != null) {
+            return withAlpha(color, 0.32f);
+        }
+
+        color = UIManager.getColor("Separator.foreground");
+        if (color != null) {
+            return withAlpha(color, 0.32f);
+        }
+
+        return new Color(0x4B5067, true);
+    }
+
+    private Color getActionButtonHoverBackground() {
+        return mix(getViewTabBackground(), getShellBackground(), 0.25f);
+    }
+
+    private Color getAddButtonForeground() {
+        return withAlpha(getPrimaryTextColor(), 0.88f);
+    }
+
+    private Color getCloseButtonForeground() {
+        return getSecondaryTextColor();
+    }
+
+    private Color getCloseButtonHoverForeground() {
+        return getPrimaryTextColor();
+    }
+
+    private Color getCloseButtonHoverBackground() {
+        return withAlpha(getPrimaryTextColor(), 0.14f);
+    }
+
+    private static Color mix(Color first, Color second, float secondWeight) {
+        float clampedWeight = Math.max(0f, Math.min(1f, secondWeight));
+        float firstWeight = 1f - clampedWeight;
+        return new Color(
+                Math.round(first.getRed() * firstWeight + second.getRed() * clampedWeight),
+                Math.round(first.getGreen() * firstWeight + second.getGreen() * clampedWeight),
+                Math.round(first.getBlue() * firstWeight + second.getBlue() * clampedWeight),
+                Math.round(first.getAlpha() * firstWeight + second.getAlpha() * clampedWeight)
+        );
+    }
+
+    private static Color withAlpha(Color color, float alphaFactor) {
+        return new Color(
+                color.getRed(),
+                color.getGreen(),
+                color.getBlue(),
+                Math.round(Math.max(0f, Math.min(1f, alphaFactor)) * 255)
+        );
+    }
+
+    private final class ViewTabChip extends JPanel {
+        private final JLabel titleLabel;
+        private final JButton closeButton;
+
+        private ViewTabChip(String viewId, String title, int tabIndex, boolean closable) {
+            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+            setOpaque(true);
+            setFocusable(false);
+            setBackground(getViewTabBackground());
+            setBorder(createTabBorder(false));
+            setPreferredSize(new Dimension(VIEW_TAB_WIDTH, VIEW_TAB_HEIGHT));
+            setMinimumSize(new Dimension(VIEW_TAB_WIDTH, VIEW_TAB_HEIGHT));
+            setMaximumSize(new Dimension(VIEW_TAB_WIDTH, VIEW_TAB_HEIGHT));
+
+            titleLabel = new JLabel(title);
+            titleLabel.setForeground(getSecondaryTextColor());
+            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.PLAIN, VIEW_TAB_FONT_SIZE));
+            titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+            titleLabel.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+            add(Box.createHorizontalStrut(6));
+            add(titleLabel);
+            add(Box.createHorizontalGlue());
+
+            if (closable) {
+                add(Box.createHorizontalStrut(4));
+                closeButton = new CloseTabButton(viewId, tabIndex);
+                add(closeButton);
+            } else {
+                closeButton = null;
+            }
+
+            add(Box.createHorizontalStrut(6));
+
+            MouseAdapter selectListener = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent event) {
+                    tabbedPane.setSelectedIndex(tabIndex);
+                }
+            };
+            addMouseListener(selectListener);
+            titleLabel.addMouseListener(selectListener);
+        }
+
+        private void applySelection(boolean selected) {
+            setBackground(selected ? getSelectedViewTabBackground() : getViewTabBackground());
+            setBorder(createTabBorder(selected));
+            titleLabel.setForeground(selected ? getPrimaryTextColor() : getSecondaryTextColor());
+        }
+
+        private Border createTabBorder(boolean selected) {
+            return BorderFactory.createCompoundBorder(
                     BorderFactory.createCompoundBorder(
-                            BorderFactory.createMatteBorder(0, 0, 2, 0, selected ? TAB_SELECTION : SHELL_BACKGROUND),
-                            BorderFactory.createMatteBorder(0, 0, 0, 1, VIEW_TAB_SEPARATOR)
+                            BorderFactory.createMatteBorder(0, 0, 2, 0, selected ? getSelectionColor() : getViewTabBackground()),
+                            BorderFactory.createMatteBorder(0, 0, 0, 1, getViewTabSeparatorColor())
                     ),
-                    BorderFactory.createEmptyBorder(2, 8, 2, 8)
-            ));
+                    BorderFactory.createEmptyBorder(2, 0, 2, 0)
+            );
+        }
+    }
+
+    private final class CloseTabButton extends JButton {
+        private boolean hovered;
+
+        private CloseTabButton(String viewId, int tabIndex) {
+            super("x");
+            setToolTipText("Close View");
+            setFocusable(false);
+            setOpaque(false);
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setBorder(BorderFactory.createEmptyBorder());
+            setMargin(new Insets(0, 0, 0, 0));
+            setForeground(getCloseButtonForeground());
+            setFont(getFont().deriveFont(Font.BOLD, 10f));
+            setHorizontalAlignment(SwingConstants.CENTER);
+            setVerticalAlignment(SwingConstants.CENTER);
+            setPreferredSize(new Dimension(CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE));
+            setMinimumSize(new Dimension(CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE));
+            setMaximumSize(new Dimension(CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE));
+            setAlignmentY(Component.CENTER_ALIGNMENT);
+            addActionListener(event -> deleteView(viewId, tabIndex));
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent event) {
+                    hovered = true;
+                    setForeground(getCloseButtonHoverForeground());
+                    repaint();
+                }
+
+                @Override
+                public void mouseExited(MouseEvent event) {
+                    hovered = false;
+                    setForeground(getCloseButtonForeground());
+                    repaint();
+                }
+            });
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g2 = (Graphics2D) graphics.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            if (hovered) {
+                g2.setColor(getCloseButtonHoverBackground());
+                g2.fillOval(0, 0, getWidth(), getHeight());
+            }
+            super.paintComponent(g2);
+            g2.dispose();
+        }
+    }
+
+    private final class AddViewButton extends JButton {
+        private boolean hovered;
+
+        private AddViewButton() {
+            setText(null);
+            setMargin(new Insets(0, 0, 0, 0));
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent event) {
+                    hovered = true;
+                    setBackground(getActionButtonHoverBackground());
+                    repaint();
+                }
+
+                @Override
+                public void mouseExited(MouseEvent event) {
+                    hovered = false;
+                    setBackground(getViewTabBackground());
+                    repaint();
+                }
+            });
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g2 = (Graphics2D) graphics.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(getBackground());
+            g2.fillRect(0, 0, getWidth(), getHeight());
+
+            int strokeWidth = 2;
+            int iconHalf = ADD_ICON_SIZE / 2;
+            int centerX = getWidth() / 2;
+            int centerY = getHeight() / 2;
+            g2.setColor(getAddButtonForeground());
+            g2.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.drawLine(centerX - iconHalf, centerY, centerX + iconHalf, centerY);
+            g2.drawLine(centerX, centerY - iconHalf, centerX, centerY + iconHalf);
+
+            if (hovered) {
+                g2.setColor(withAlpha(getPrimaryTextColor(), 0.05f));
+                g2.fillRect(0, 0, getWidth(), getHeight());
+            }
+            g2.dispose();
         }
     }
 
@@ -487,7 +692,16 @@ public class YamlWorkspacePanel {
         }
 
         @Override
+        protected Insets getContentBorderInsets(int tabPlacement) {
+            return new Insets(0, 0, 0, 0);
+        }
+
+        @Override
         protected void paintTabArea(Graphics g, int tabPlacement, int selectedIndex) {
+        }
+
+        @Override
+        protected void paintContentBorder(Graphics g, int tabPlacement, int selectedIndex) {
         }
     }
 

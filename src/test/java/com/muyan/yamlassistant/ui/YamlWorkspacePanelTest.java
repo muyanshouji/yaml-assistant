@@ -72,14 +72,14 @@ public class YamlWorkspacePanelTest {
         ));
 
         assertEquals(2, panel.getTabbedPane().getTabCount());
-        assertEquals("View 1", panel.getTabbedPane().getTitleAt(0));
-        assertEquals("View 2", panel.getTabbedPane().getTitleAt(1));
+        assertEquals("View", panel.getTabbedPane().getTitleAt(0));
+        assertEquals("View 1", panel.getTabbedPane().getTitleAt(1));
 
         runOnEdt(panel::createNewView);
 
         assertEquals(3, stateService.getViews().size());
         assertEquals(3, panel.getTabbedPane().getTabCount());
-        assertEquals("View 3", panel.getTabbedPane().getTitleAt(2));
+        assertEquals("View 2", panel.getTabbedPane().getTitleAt(2));
         assertEquals(2, panel.getTabbedPane().getSelectedIndex());
     }
 
@@ -103,6 +103,7 @@ public class YamlWorkspacePanelTest {
 
         assertNotNull(panel.getAddViewButton());
         assertEquals("New View", panel.getAddViewButton().getToolTipText());
+        assertSame(panel.getViewTabsPanel(), panel.getAddViewButton().getParent());
     }
 
     @Test
@@ -128,7 +129,7 @@ public class YamlWorkspacePanelTest {
 
         assertEquals(2, panel.getTabbedPane().getTabCount());
         assertEquals(1, diffTitles.size());
-        assertEquals("View 1 vs View 2", diffTitles.get(0));
+        assertEquals("View vs View 1", diffTitles.get(0));
     }
 
     @Test
@@ -228,7 +229,7 @@ public class YamlWorkspacePanelTest {
 
         assertEquals(1, stateService.getViews().size());
         assertEquals(1, panel.getTabbedPane().getTabCount());
-        assertEquals("View 1", panel.getTabbedPane().getTitleAt(0));
+        assertEquals("View", panel.getTabbedPane().getTitleAt(0));
     }
 
     @Test
@@ -255,7 +256,34 @@ public class YamlWorkspacePanelTest {
 
         assertEquals(1, stateService.getViews().size());
         assertEquals(1, panel.getTabbedPane().getTabCount());
-        assertEquals("View 1", panel.getTabbedPane().getTitleAt(0));
+        assertEquals("View", panel.getTabbedPane().getTitleAt(0));
+    }
+
+    @Test
+    public void testWorkspacePanelDoesNotDeleteFirstFixedViewWhenMultipleTabsExist() throws Exception {
+        YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
+        stateService.createView("alpha: 1");
+        stateService.createView("beta: 2");
+
+        YamlWorkspacePanel panel = runOnEdt(() -> new YamlWorkspacePanel(
+                stateService,
+                parserService,
+                formatterService,
+                (views, parent) -> null,
+                message -> {
+                },
+                (title, leftName, rightName, leftText, rightText) -> {
+                },
+                () -> {
+                }
+        ));
+
+        runOnEdt(() -> panel.getTabbedPane().setSelectedIndex(0));
+        runOnEdt(panel::deleteCurrentView);
+
+        assertEquals(2, stateService.getViews().size());
+        assertEquals("View", panel.getTabbedPane().getTitleAt(0));
+        assertEquals("View 1", panel.getTabbedPane().getTitleAt(1));
     }
 
     @Test
@@ -276,8 +304,8 @@ public class YamlWorkspacePanelTest {
                 }
         ));
 
-        assertEquals(3, panel.getActionButtonsPanel().getComponentCount());
         assertNotNull(panel.getAddViewButton());
+        assertEquals(2, panel.getToolWindowTitleActions().length);
     }
 
     @Test
@@ -300,12 +328,14 @@ public class YamlWorkspacePanelTest {
 
         Component tabComponent = panel.getViewTabsPanel().getComponent(0);
 
-        assertTrue(tabComponent instanceof JToggleButton);
-        assertEquals("View 1", ((JToggleButton) tabComponent).getText());
+        assertTrue(tabComponent instanceof JPanel);
+
+        JLabel titleLabel = (JLabel) findDescendant(tabComponent, JLabel.class, "View");
+        assertNotNull(titleLabel);
     }
 
     @Test
-    public void testWorkspacePanelBuildsTwoRowHeader() throws Exception {
+    public void testWorkspacePanelBuildsSingleRowTabHeader() throws Exception {
         YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
         stateService.ensureAtLeastOneView();
 
@@ -323,19 +353,13 @@ public class YamlWorkspacePanelTest {
         ));
 
         JPanel topBar = panel.getTopBarPanel();
-        JPanel workspaceHeader = panel.getWorkspaceHeaderPanel();
         JPanel tabsRow = panel.getTabsRowPanel();
         JScrollPane tabsScrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, panel.getViewTabsPanel());
 
-        assertSame(topBar, workspaceHeader.getParent());
         assertSame(topBar, tabsRow.getParent());
-        assertSame(workspaceHeader, panel.getWorkspaceTitleLabel().getParent());
-        assertSame(workspaceHeader, panel.getActionButtonsPanel().getParent());
         assertNotNull(tabsScrollPane);
         assertSame(tabsRow, tabsScrollPane.getParent());
-        assertSame(tabsRow, panel.getAddViewButton().getParent());
-        assertEquals("Workspace", panel.getWorkspaceTitleLabel().getText());
-        assertEquals(3, panel.getActionButtonsPanel().getComponentCount());
+        assertSame(panel.getViewTabsPanel(), panel.getAddViewButton().getParent());
     }
 
     @Test
@@ -360,7 +384,7 @@ public class YamlWorkspacePanelTest {
     }
 
     @Test
-    public void testWorkspacePanelReservesBottomGutterForTabScrollbar() throws Exception {
+    public void testWorkspacePanelKeepsTabStripFlushWithEditor() throws Exception {
         YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
         stateService.ensureAtLeastOneView();
 
@@ -379,8 +403,134 @@ public class YamlWorkspacePanelTest {
 
         Insets insets = panel.getViewTabsPanel().getBorder().getBorderInsets(panel.getViewTabsPanel());
 
-        assertTrue(panel.getViewTabsScrollPane().getPreferredSize().height > panel.getAddViewButton().getPreferredSize().height);
-        assertTrue(insets.bottom > 0);
+        assertTrue(panel.getViewTabsScrollPane().getPreferredSize().height >= panel.getAddViewButton().getPreferredSize().height);
+        assertEquals(0, insets.bottom);
+    }
+
+    @Test
+    public void testWorkspacePanelShowsCloseAffordanceOnClosableTabs() throws Exception {
+        YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
+        stateService.createView("alpha: 1");
+        stateService.createView("beta: 2");
+
+        YamlWorkspacePanel panel = runOnEdt(() -> new YamlWorkspacePanel(
+                stateService,
+                parserService,
+                formatterService,
+                (views, parent) -> null,
+                message -> {
+                },
+                (title, leftName, rightName, leftText, rightText) -> {
+                },
+                () -> {
+                }
+        ));
+
+        Component firstTab = panel.getViewTabsPanel().getComponent(0);
+        Component secondTab = panel.getViewTabsPanel().getComponent(1);
+
+        assertNull(findDescendant(firstTab, JButton.class, "x"));
+        assertNotNull(findDescendant(secondTab, JButton.class, "x"));
+    }
+
+    @Test
+    public void testWorkspacePanelDoesNotShowCloseAffordanceOnLastRemainingTab() throws Exception {
+        YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
+        stateService.ensureAtLeastOneView();
+
+        YamlWorkspacePanel panel = runOnEdt(() -> new YamlWorkspacePanel(
+                stateService,
+                parserService,
+                formatterService,
+                (views, parent) -> null,
+                message -> {
+                },
+                (title, leftName, rightName, leftText, rightText) -> {
+                },
+                () -> {
+                }
+        ));
+
+        Component onlyTab = panel.getViewTabsPanel().getComponent(0);
+
+        assertNull(findDescendant(onlyTab, JButton.class, "x"));
+    }
+
+    @Test
+    public void testWorkspacePanelPlacesAddButtonAtEndOfTabStrip() throws Exception {
+        YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
+        stateService.createView("alpha: 1");
+        stateService.createView("beta: 2");
+
+        YamlWorkspacePanel panel = runOnEdt(() -> new YamlWorkspacePanel(
+                stateService,
+                parserService,
+                formatterService,
+                (views, parent) -> null,
+                message -> {
+                },
+                (title, leftName, rightName, leftText, rightText) -> {
+                },
+                () -> {
+                }
+        ));
+
+        Component lastComponent = panel.getViewTabsPanel().getComponent(panel.getViewTabsPanel().getComponentCount() - 1);
+
+        assertSame(panel.getAddViewButton(), lastComponent);
+        assertEquals(panel.getAddViewButton().getPreferredSize().height, ((JComponent) panel.getViewTabsPanel().getComponent(0)).getPreferredSize().height);
+    }
+
+    @Test
+    public void testWorkspacePanelCreateViewReusesDeletedTabNumber() throws Exception {
+        YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
+        stateService.createView("alpha: 1");
+        stateService.createView("beta: 2");
+        stateService.createView("gamma: 3");
+
+        YamlWorkspacePanel panel = runOnEdt(() -> new YamlWorkspacePanel(
+                stateService,
+                parserService,
+                formatterService,
+                (views, parent) -> null,
+                message -> {
+                },
+                (title, leftName, rightName, leftText, rightText) -> {
+                },
+                () -> {
+                }
+        ));
+
+        runOnEdt(() -> panel.getTabbedPane().setSelectedIndex(2));
+        runOnEdt(panel::deleteCurrentView);
+        runOnEdt(panel::createNewView);
+
+        assertEquals("View 2", panel.getTabbedPane().getTitleAt(panel.getTabbedPane().getSelectedIndex()));
+    }
+
+    @Test
+    public void testWorkspacePanelUsesFixedTabWidth() throws Exception {
+        YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
+        stateService.createView("alpha: 1");
+        stateService.createView("beta: 2");
+
+        YamlWorkspacePanel panel = runOnEdt(() -> new YamlWorkspacePanel(
+                stateService,
+                parserService,
+                formatterService,
+                (views, parent) -> null,
+                message -> {
+                },
+                (title, leftName, rightName, leftText, rightText) -> {
+                },
+                () -> {
+                }
+        ));
+
+        Dimension first = ((JComponent) panel.getViewTabsPanel().getComponent(0)).getPreferredSize();
+        Dimension second = ((JComponent) panel.getViewTabsPanel().getComponent(1)).getPreferredSize();
+
+        assertEquals(first.width, second.width);
     }
 
     @Test
@@ -412,6 +562,34 @@ public class YamlWorkspacePanelTest {
             }
         });
         return (T) result[0];
+    }
+
+    private static <T extends Component> T findDescendant(Component root, Class<T> type, String text) {
+        if (type.isInstance(root)) {
+            T candidate = type.cast(root);
+            if (candidate instanceof AbstractButton button) {
+                if (text.equals(button.getText())) {
+                    return candidate;
+                }
+            } else if (candidate instanceof JLabel label) {
+                if (text.equals(label.getText())) {
+                    return candidate;
+                }
+            } else {
+                return candidate;
+            }
+        }
+
+        if (root instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                T match = findDescendant(child, type, text);
+                if (match != null) {
+                    return match;
+                }
+            }
+        }
+
+        return null;
     }
 
     @FunctionalInterface

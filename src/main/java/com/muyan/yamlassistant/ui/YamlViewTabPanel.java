@@ -2,6 +2,7 @@ package com.muyan.yamlassistant.ui;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
+import com.intellij.openapi.editor.colors.EditorColorsManager;
 import com.intellij.openapi.editor.EditorFactory;
 import com.intellij.openapi.editor.event.DocumentEvent;
 import com.intellij.openapi.editor.event.DocumentListener;
@@ -124,8 +125,7 @@ public class YamlViewTabPanel {
 
     private void configureEditorField(EditorTextField editorField) {
         editorField.setOneLineMode(false);
-        editorField.setFontInheritedFromLAF(false);
-        editorField.setFont(new Font(Font.MONOSPACED, Font.PLAIN, editorField.getFont().getSize()));
+        editorField.setBorder(Borders.empty());
         editorField.addSettingsProvider(editor -> {
             editor.setHorizontalScrollbarVisible(false);
             editor.setVerticalScrollbarVisible(true);
@@ -138,38 +138,70 @@ public class YamlViewTabPanel {
     }
 
     private void applyTheme() {
-        if (isDarkTheme()) {
-            Color editorBackground = new Color(0x2B2D3A);
+        Color editorBackground = getEditorBackground();
+        Color panelBackground = getPanelBackground();
+        Color labelForeground = getLabelForeground();
+        Color separatorColor = getSeparatorColor();
 
-            mainPanel.setBackground(editorBackground);
-            editorComponent.setBackground(editorBackground);
-            if (editorField != null) {
-                editorField.setBackground(editorBackground);
-            }
-            if (fallbackTextArea != null) {
-                fallbackTextArea.setBackground(editorBackground);
-                fallbackTextArea.setForeground(new Color(0xE6E8EF));
-                fallbackTextArea.setCaretColor(new Color(0xC8CCFF));
-                fallbackTextArea.setSelectionColor(new Color(0x4A4F7A));
-                fallbackTextArea.setSelectedTextColor(new Color(0xE6E8EF));
-                fallbackTextArea.setBorder(Borders.empty(8));
-            }
-
-            statusPanel.setOpaque(true);
-            statusPanel.setBackground(new Color(0x2F3141));
-            statusLabel.setOpaque(true);
-            statusLabel.setBackground(new Color(0x2F3141));
-            statusLabel.setForeground(new Color(0xAEB6C9));
-        } else {
-            statusPanel.setOpaque(true);
-            statusPanel.setBackground(UIManager.getColor("Panel.background"));
-            statusLabel.setForeground(UIManager.getColor("Label.foreground"));
+        mainPanel.setBackground(editorBackground);
+        editorComponent.setBackground(editorBackground);
+        if (editorField != null) {
+            editorField.setBackground(editorBackground);
         }
+        if (fallbackTextArea != null) {
+            fallbackTextArea.setBackground(editorBackground);
+            fallbackTextArea.setForeground(labelForeground);
+            fallbackTextArea.setCaretColor(labelForeground);
+            fallbackTextArea.setSelectionColor(UIManager.getColor("TextArea.selectionBackground"));
+            fallbackTextArea.setSelectedTextColor(UIManager.getColor("TextArea.selectionForeground"));
+            fallbackTextArea.setBorder(Borders.empty(8));
+        }
+
+        statusPanel.setOpaque(true);
+        statusPanel.setBackground(panelBackground);
+        statusPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, separatorColor),
+                Borders.empty(6, 10)
+        ));
+        statusLabel.setOpaque(false);
+        statusLabel.setForeground(labelForeground);
     }
 
-    private boolean isDarkTheme() {
+    private Color getEditorBackground() {
+        if (ApplicationManager.getApplication() != null) {
+            Color background = EditorColorsManager.getInstance().getGlobalScheme().getDefaultBackground();
+            if (background != null) {
+                return background;
+            }
+        }
+
+        Color background = UIManager.getColor("EditorPane.background");
+        if (background != null) {
+            return background;
+        }
+
+        background = UIManager.getColor("TextArea.background");
+        return background != null ? background : Color.WHITE;
+    }
+
+    private Color getPanelBackground() {
         Color background = UIManager.getColor("Panel.background");
-        return background != null && background.getRed() < 128;
+        return background != null ? background : getEditorBackground();
+    }
+
+    private Color getLabelForeground() {
+        Color foreground = UIManager.getColor("Label.foreground");
+        return foreground != null ? foreground : Color.BLACK;
+    }
+
+    private Color getSeparatorColor() {
+        Color separator = UIManager.getColor("Component.borderColor");
+        if (separator != null) {
+            return separator;
+        }
+
+        separator = UIManager.getColor("Separator.foreground");
+        return separator != null ? separator : new Color(0x3A3D52);
     }
 
     private void syncContent() {

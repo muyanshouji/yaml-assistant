@@ -49,12 +49,14 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
     }
 
     public YamlViewState createView(String content) {
+        String name = state.views.isEmpty() ? "View" : "View " + nextViewIndex();
         YamlViewState view = new YamlViewState(
                 UUID.randomUUID().toString(),
-                "View " + state.nextViewIndex++,
+                name,
                 content
         );
         state.views.add(view);
+        state.nextViewIndex = Math.max(state.nextViewIndex, nextViewIndex());
         return view;
     }
 
@@ -141,11 +143,17 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
 
             String name = view.getName();
             if (name == null || name.isEmpty()) {
-                name = "View " + (maxViewIndex + 1);
+                name = normalizedState.views.isEmpty() ? "View" : "View " + (maxViewIndex + 1);
             }
 
             normalizedState.views.add(new YamlViewState(id, name, content));
             maxViewIndex = Math.max(maxViewIndex, parseViewIndex(name));
+        }
+
+        migrateLegacyDefaultViewNames(normalizedState.views);
+        maxViewIndex = 0;
+        for (YamlViewState view : normalizedState.views) {
+            maxViewIndex = Math.max(maxViewIndex, parseViewIndex(view.getName()));
         }
 
         normalizedState.nextViewIndex = Math.max(loadedState.nextViewIndex, maxViewIndex + 1);
@@ -153,6 +161,9 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
     }
 
     private int parseViewIndex(String name) {
+        if ("View".equals(name)) {
+            return 0;
+        }
         if (name != null && name.startsWith("View ")) {
             try {
                 return Integer.parseInt(name.substring("View ".length()));
@@ -161,5 +172,36 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
             }
         }
         return 0;
+    }
+
+    private int nextViewIndex() {
+        int maxViewIndex = 0;
+        for (YamlViewState view : state.views) {
+            maxViewIndex = Math.max(maxViewIndex, parseViewIndex(view.getName()));
+        }
+        return maxViewIndex + 1;
+    }
+
+    private void migrateLegacyDefaultViewNames(List<YamlViewState> views) {
+        if (views.isEmpty()) {
+            return;
+        }
+
+        int firstIndex = parseViewIndex(views.get(0).getName());
+        if (firstIndex <= 0) {
+            return;
+        }
+
+        for (int index = 0; index < views.size(); index++) {
+            int expectedIndex = firstIndex + index;
+            if (!("View " + expectedIndex).equals(views.get(index).getName())) {
+                return;
+            }
+        }
+
+        views.get(0).setName("View");
+        for (int index = 1; index < views.size(); index++) {
+            views.get(index).setName("View " + index);
+        }
     }
 }
