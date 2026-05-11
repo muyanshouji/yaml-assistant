@@ -5,19 +5,84 @@
 
     <description><![CDATA[
         <h2>Config Assistant</h2>
-        <p>A polished config workspace for YAML editing, formatting, diffing, and conversion inside IntelliJ IDEA.</p>
+        <p>
+            A lightweight YAML workspace inside IntelliJ IDEA for temporary config inspection, formatting, and comparison.
+        </p>
+        <p>
+            It is especially useful when comparing configuration differences across environments, reviewing service migration changes, or troubleshooting deployment issues without creating throwaway YAML files in your project.
+        </p>
+
+        <h3>Key Features</h3>
         <ul>
-            <li><b>Workspace</b> — Manage multiple saved YAML views per project</li>
-            <li><b>Format</b> — Beautify YAML in place</li>
-            <li><b>Compare</b> — Open native IntelliJ diff between saved views</li>
-            <li><b>Convert</b> — YAML ↔ JSON bidirectional conversion</li>
-            <li><b>Validate</b> — Surface YAML errors with inline feedback</li>
+            <li>Project-level multi-view YAML workspace</li>
+            <li>Native IntelliJ Diff between saved views</li>
+            <li>In-place YAML formatting with comment preservation</li>
+            <li>Inline YAML validation feedback</li>
+            <li>Saved views persist after IDE restart</li>
+            <li>No need to create temporary local YAML files</li>
         </ul>
+
+        <h3>Common Use Cases</h3>
+        <ul>
+            <li>Compare test and production YAML during troubleshooting</li>
+            <li>Review configuration changes during service migration</li>
+            <li>Keep before/after snapshots while adjusting config</li>
+            <li>Inspect copied YAML quickly without polluting the project</li>
+        </ul>
+
+        <h3>Getting Started</h3>
+        <ol>
+            <li>Open <code>Config Assistant</code> from the right tool window bar.</li>
+            <li>Click <code>+</code> to create saved views for different YAML variants.</li>
+            <li>Paste YAML into each view. Views are stored at the project level.</li>
+            <li>Use <code>Format</code> to normalize YAML content and keep it readable.</li>
+            <li>Use <code>Compare</code> to select two saved views and open the native IntelliJ Diff window.</li>
+            <li>Close extra views with the tab <code>x</code>. The first <code>View</code> is always kept.</li>
+            <li>Invalid YAML is highlighted inline, and the status bar shows whether parsing succeeded.</li>
+        </ol>
+
+        <h3>中文简介</h3>
+        <p>
+            Config Assistant 是一个直接工作在 IntelliJ IDEA 里的轻量级 YAML 配置工作区，适合临时查看、整理和对比配置内容。
+        </p>
+        <p>
+            当你需要排查不同环境之间的配置差异、核对服务迁移前后的 YAML，或者临时查看别人发来的配置时，不需要再在本地项目里新建一次性 YAML 文件，用完再删除。
+        </p>
+
+        <h3>核心能力</h3>
+        <ul>
+            <li>项目级多视图 YAML 工作区</li>
+            <li>使用 IntelliJ 原生 Diff 对比已保存视图</li>
+            <li>原地格式化 YAML，并尽量保留注释</li>
+            <li>内联 YAML 校验反馈</li>
+            <li>视图在 IDE 重启后仍可恢复</li>
+            <li>不需要在项目里新建临时本地 YAML 文件</li>
+        </ul>
+
+        <h3>典型场景</h3>
+        <ul>
+            <li>排查测试环境和生产环境配置差异</li>
+            <li>服务迁移时核对新旧配置</li>
+            <li>调整配置时保留 before / after 快照</li>
+            <li>快速查看复制过来的 YAML，又不污染项目目录</li>
+        </ul>
+
+        <h3>快速开始</h3>
+        <ol>
+            <li>在右侧工具窗口栏打开 <code>Config Assistant</code>。</li>
+            <li>点击 <code>+</code> 创建多个保存视图，用来保存不同版本的 YAML。</li>
+            <li>将 YAML 粘贴到各个视图中，视图会按项目维度保存。</li>
+            <li>使用 <code>Format</code> 规范化 YAML 内容，保持格式整洁。</li>
+            <li>使用 <code>Compare</code> 选择两个保存视图，并打开 IntelliJ 原生 Diff 窗口。</li>
+            <li>通过 tab 上的 <code>x</code> 关闭多余视图，系统始终至少保留第一个 <code>View</code>。</li>
+            <li>非法 YAML 会在编辑区内联高亮，底部状态栏会显示解析结果。</li>
+        </ol>
     ]]></description>
 
     <!-- 插件依赖 -->
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.plugins.yaml</depends>
+    <depends>com.intellij.properties</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Tool Window: YAML 树形查看面板 -->

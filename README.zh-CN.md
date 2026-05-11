@@ -2,11 +2,11 @@
 
 # Config Assistant
 
-一个直接工作在 IntelliJ IDEA 里的 YAML 配置工作区，用来更快地查看、整理、对比和转换配置内容。
+一个直接工作在 IntelliJ IDEA 里的配置工作区，用来更快地查看、校验、整理和对比 YAML 与 `.properties` 内容。
 
-Config Assistant 的核心目标很简单：当你在排查服务迁移问题、核对不同环境配置、或者检查线上问题时，不需要再在本地项目里临时新建 YAML 文件、粘贴内容、对比完再删除。
+Config Assistant 的核心目标很简单：当你在排查服务迁移问题、核对不同环境配置、或者检查线上问题时，不需要再在本地项目里临时新建配置文件、粘贴内容、对比完再删除。
 
-它提供了一个独立的 config workspace，让你在 IDEA 里直接保存多个临时视图，随时格式化、对比，并在项目级别持久化这些内容。
+它提供了一个独立的 config workspace，让你在 IDEA 里直接保存多个 YAML 或 `.properties` 临时视图，随时校验、格式化、对比，并在项目级别持久化这些内容。
 
 ## 为什么做这个插件
 
@@ -31,27 +31,29 @@ Config Assistant 就是为了解决这类低效操作。
 
 ## 核心能力
 
-- IntelliJ IDEA 内置的多视图 YAML 工作区
+- IntelliJ IDEA 内置的多视图 YAML / `.properties` 工作区
 - 项目级持久化视图，重启 IDE 后仍可恢复
-- 使用 IntelliJ 原生 Diff 对比已保存视图
+- 使用 IntelliJ 原生 Diff 对比同类型的已保存视图
 - 原地格式化 YAML，并尽量保留注释
-- 编辑时提供基础校验反馈
-- 不需要在项目里新建临时 YAML 文件
+- 编辑时提供 YAML / `.properties` 基础校验反馈
+- 不需要在项目里新建临时配置文件
 
 ## 使用流程
 
 1. 打开 `Config Assistant` 工具窗口。
-2. 创建一个或多个 `View`。
-3. 粘贴不同环境、不同服务或不同版本的 YAML。
-4. 用 `Format` 统一整理格式。
-5. 用 `Compare` 打开 IntelliJ 原生 Diff。
+2. 选择 `YAML` 或 `Properties`，然后创建一个或多个 `View`。
+3. 粘贴不同环境、不同服务或不同版本的配置内容。
+4. 需要时用 `Format` 整理 YAML 或 `.properties` 内容。
+5. 用 `Compare` 打开同类型视图之间的 IntelliJ 原生 Diff。
 6. 保留这些视图，后续继续排查，不污染仓库。
 
 ## 功能说明
 
 - 第一个 tab 固定为 `View`，不可删除。
 - 后续 tab 按 `View 1`、`View 2` 递增命名。
+- YAML 和 `Properties` 各自维护独立视图列表。
 - 对比使用 IntelliJ 原生 Diff，不在工具窗口里额外维护 Diff tab。
+- `Format` 支持 YAML 和 `Properties` 视图。
 - 所有视图都按项目维度保存。
 - 这个 workspace 更适合临时配置分析和比对，不是替代正式配置文件管理。
 

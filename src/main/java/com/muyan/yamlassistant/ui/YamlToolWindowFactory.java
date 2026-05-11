@@ -24,7 +24,6 @@ public class YamlToolWindowFactory implements ToolWindowFactory {
         YamlWorkspacePanel workspacePanel = new YamlWorkspacePanel(project, toolWindow::hide);
 
         if (toolWindow instanceof ToolWindowEx toolWindowEx) {
-            toolWindowEx.setTitleActions();
             toolWindowEx.setTabActions(workspacePanel.getToolWindowTitleActions());
         }
 

@@ -7,6 +7,10 @@ import com.muyan.yamlassistant.model.YamlNode;
 import com.muyan.yamlassistant.services.YamlConverterService;
 import com.muyan.yamlassistant.services.YamlFormatterService;
 import com.muyan.yamlassistant.services.YamlParserService;
+import com.muyan.yamlassistant.services.PropertiesFormatterService;
+import com.muyan.yamlassistant.services.PropertiesValidatorService;
+import com.muyan.yamlassistant.util.YamlPathUtil;
+import com.muyan.yamlassistant.workspace.WorkspaceContentType;
 import com.muyan.yamlassistant.workspace.YamlViewState;
 import com.muyan.yamlassistant.workspace.YamlWorkspaceStateService;
 import org.junit.Test;
@@ -20,6 +24,8 @@ public class YamlAssistantTest {
 
     private final YamlParserService parserService = new YamlParserService();
     private final YamlFormatterService formatterService = new YamlFormatterService();
+    private final PropertiesFormatterService propertiesFormatterService = new PropertiesFormatterService();
+    private final PropertiesValidatorService propertiesValidatorService = new PropertiesValidatorService();
     private final YamlConverterService converterService = new YamlConverterService();
     private final YamlDiffService diffService = new YamlDiffService();
 
@@ -61,6 +67,25 @@ public class YamlAssistantTest {
         assertNull(parserService.validate(yaml));
     }
 
+    @Test
+    public void testValidateYamlAcceptsMavenStylePlaceholders() {
+        String yaml = "spring:\n  profiles:\n    active: @profileActive@\n";
+
+        assertNull(parserService.validate(yaml));
+    }
+
+    @Test
+    public void testParseYamlRestoresMavenStylePlaceholderValues() {
+        String yaml = "spring:\n  profiles:\n    active: @profileActive@\n";
+
+        YamlDocument document = parserService.parse(yaml);
+
+        assertTrue(document.isValid());
+        YamlNode active = YamlPathUtil.findByPath(document.getRoots().get(0), "spring.profiles.active");
+        assertNotNull(active);
+        assertEquals("@profileActive@", active.getValue());
+    }
+
     // ==================== Formatter Tests ====================
 
     @Test
@@ -96,6 +121,63 @@ public class YamlAssistantTest {
         String yaml = "name: test\nversion: 1.0\n";
         String result = formatterService.minify(yaml);
         assertNotNull(result);
+    }
+
+    @Test
+    public void testBeautifyYamlPreservesMavenStylePlaceholders() {
+        String yaml = "spring:\n  profiles:\n    active: @profileActive@\n";
+
+        String result = formatterService.beautify(yaml);
+
+        assertTrue(result.contains("active: @profileActive@"));
+    }
+
+    @Test
+    public void testBeautifyPropertiesNormalizesAssignmentsAndKeepsComments() {
+        String properties = "  server.port : 8080\n# keep me\nspring.application.name    shop\nempty.key\n";
+
+        String result = propertiesFormatterService.beautify(properties);
+
+        assertEquals("server.port=8080\n# keep me\nspring.application.name=shop\nempty.key=\n", result);
+    }
+
+    @Test
+    public void testBeautifyPropertiesKeepsContinuationBlocksUntouched() {
+        String properties = "message = hello, \\\n+  world\nnext.value : 1\n";
+
+        String result = propertiesFormatterService.beautify(properties);
+
+        assertEquals("message = hello, \\\n+  world\nnext.value=1\n", result);
+    }
+
+    @Test
+    public void testValidatePropertiesRejectsYamlLikeNestedMappings() {
+        String properties = "spring:\n  application:\n    name: shop\n";
+
+        String validation = propertiesValidatorService.validate(properties);
+
+        assertNotNull(validation);
+        assertTrue(validation.startsWith("Likely YAML mapping syntax"));
+    }
+
+    @Test
+    public void testValidatePropertiesRequiresEqualsSeparator() {
+        assertEquals(
+                "Expected key=value syntax at line 1, column 1.",
+                propertiesValidatorService.validate("spring.datasource.password")
+        );
+        assertEquals(
+                "Expected key=value syntax at line 1, column 1.",
+                propertiesValidatorService.validate("spring.datasource.url:jdbc:mysql://127.0.0.1:3306/testdb")
+        );
+    }
+
+    @Test
+    public void testValidatePropertiesRejectsMissingKeyBeforeEquals() {
+        assertEquals(
+                "Missing key before '=' at line 1, column 1.",
+                propertiesValidatorService.validate("=value")
+        );
     }
 
     // ==================== Converter Tests ====================
@@ -146,6 +228,21 @@ public class YamlAssistantTest {
         assertEquals("View", first.getName());
         assertEquals("View 1", second.getName());
         assertEquals(2, service.getViews().size());
+        assertEquals(WorkspaceContentType.YAML, first.getContentType());
+    }
+
+    @Test
+    public void testWorkspaceStateSupportsIndependentPropertiesViews() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+
+        service.setSelectedContentType(WorkspaceContentType.PROPERTIES);
+        YamlViewState first = service.createView("server.port=8080", WorkspaceContentType.PROPERTIES);
+        YamlViewState second = service.createView("spring.profiles.active=prod", WorkspaceContentType.PROPERTIES);
+
+        assertEquals("View 1", first.getName());
+        assertEquals("View 2", second.getName());
+        assertEquals(3, service.getViews(WorkspaceContentType.PROPERTIES).size());
+        assertEquals(1, service.getViews(WorkspaceContentType.YAML).size());
     }
 
     @Test
@@ -302,6 +399,18 @@ public class YamlAssistantTest {
 
         assertNotNull(validation);
         assertTrue(validation.startsWith("Right view is invalid:"));
+    }
+
+    @Test
+    public void testValidateCompareSelectionRejectsMixedContentTypes() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlViewState yamlView = service.createView("alpha: 1", WorkspaceContentType.YAML);
+        YamlViewState propertiesView = service.createView("server.port=8080", WorkspaceContentType.PROPERTIES);
+
+        assertEquals(
+                "Please choose two views of the same content type.",
+                service.validateCompareSelection(yamlView.getId(), propertiesView.getId(), parserService)
+        );
     }
 
     @Test

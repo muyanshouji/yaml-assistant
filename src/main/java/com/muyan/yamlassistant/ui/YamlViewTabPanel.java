@@ -13,10 +13,14 @@ import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.RangeHighlighter;
 import com.intellij.openapi.editor.markup.TextAttributes;
+import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.EditorTextField;
+import com.muyan.yamlassistant.services.PropertiesValidatorService;
 import com.muyan.yamlassistant.services.YamlParserService;
 import com.muyan.yamlassistant.workspace.YamlViewState;
+import com.muyan.yamlassistant.workspace.WorkspaceContentType;
+import com.intellij.lang.properties.PropertiesFileType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.yaml.YAMLFileType;
 
@@ -43,6 +47,7 @@ public class YamlViewTabPanel {
     private final JTextArea fallbackTextArea;
     private final YamlViewState viewState;
     private final YamlParserService parserService;
+    private final PropertiesValidatorService propertiesValidatorService;
     private RangeHighlighter errorHighlighter;
     private final Consumer<String> onContentChanged;
 
@@ -53,14 +58,16 @@ public class YamlViewTabPanel {
         this.viewState = viewState;
         this.project = project;
         this.parserService = parserService;
+        this.propertiesValidatorService = new PropertiesValidatorService();
         this.onContentChanged = onContentChanged;
 
         mainPanel = new JPanel(new BorderLayout());
 
         String initialContent = viewState.getContent() != null ? viewState.getContent() : "";
+        FileType fileType = getFileType();
         if (ApplicationManager.getApplication() != null) {
             document = EditorFactory.getInstance().createDocument(initialContent);
-            editorField = new EditorTextField(document, project, YAMLFileType.YML, false, false);
+            editorField = new EditorTextField(document, project, fileType, false, false);
             configureEditorField(editorField);
             editorComponent = editorField;
             fallbackTextArea = null;
@@ -220,16 +227,33 @@ public class YamlViewTabPanel {
             return;
         }
 
-        String validation = parserService.validate(content);
+        String validation = validateContent(content);
         if (validation == null) {
             statusLabel.setText("Parsed successfully");
             statusIndicator.setBackground(SUCCESS_COLOR);
             clearErrorHighlight();
         } else {
-            statusLabel.setText("YAML error");
+            statusLabel.setText(getValidationErrorLabel());
             statusIndicator.setBackground(ERROR_COLOR);
             updateErrorHighlight(validation);
         }
+    }
+
+    private String validateContent(String content) {
+        if (viewState.getContentType() == WorkspaceContentType.PROPERTIES) {
+            return propertiesValidatorService.validate(content);
+        }
+        return parserService.validate(content);
+    }
+
+    private String getValidationErrorLabel() {
+        return viewState.getContentType() == WorkspaceContentType.PROPERTIES ? "Properties error" : "YAML error";
+    }
+
+    private FileType getFileType() {
+        return viewState.getContentType() == WorkspaceContentType.PROPERTIES
+                ? PropertiesFileType.INSTANCE
+                : YAMLFileType.YML;
     }
 
     private void updateErrorHighlight(String validation) {

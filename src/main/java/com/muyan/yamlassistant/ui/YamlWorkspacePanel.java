@@ -4,14 +4,19 @@ import com.intellij.diff.DiffContentFactory;
 import com.intellij.diff.DiffManager;
 import com.intellij.diff.requests.SimpleDiffRequest;
 import com.intellij.icons.AllIcons;
+import com.intellij.lang.properties.PropertiesFileType;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.DumbAwareAction;
+import com.muyan.yamlassistant.services.PropertiesValidatorService;
+import com.muyan.yamlassistant.services.PropertiesFormatterService;
 import com.muyan.yamlassistant.services.YamlFormatterService;
 import com.muyan.yamlassistant.services.YamlParserService;
 import com.muyan.yamlassistant.workspace.YamlViewState;
 import com.muyan.yamlassistant.workspace.YamlWorkspaceStateService;
+import com.muyan.yamlassistant.workspace.WorkspaceContentType;
 import com.intellij.ui.components.JBTabbedPane;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.yaml.YAMLFileType;
@@ -38,9 +43,12 @@ public class YamlWorkspacePanel {
     private static final int CLOSE_BUTTON_SIZE = 14;
     private static final int ADD_BUTTON_SIZE = 24;
     private static final int ADD_ICON_SIZE = 10;
+    private static final int TYPE_TAB_HEIGHT = 22;
+    private static final int TYPE_TAB_WIDTH = 88;
 
     private final JPanel mainPanel;
     private final JPanel topBarPanel;
+    private final JPanel typeTabsPanel;
     private final JPanel tabsRowPanel;
     private final JPanel viewTabsPanel;
     private final JScrollPane viewTabsScrollPane;
@@ -48,6 +56,8 @@ public class YamlWorkspacePanel {
     private final JTabbedPane tabbedPane;
     private final YamlWorkspaceStateService stateService;
     private final YamlParserService parserService;
+    private final PropertiesValidatorService propertiesValidatorService;
+    private final PropertiesFormatterService propertiesFormatterService;
     private final YamlFormatterService formatterService;
     private final Project project;
     private final CompareDialogHandler compareDialogHandler;
@@ -60,6 +70,7 @@ public class YamlWorkspacePanel {
     public YamlWorkspacePanel(Project project, Runnable hideWorkspaceHandler) {
         mainPanel = new JPanel(new BorderLayout());
         topBarPanel = new JPanel();
+        typeTabsPanel = new JPanel();
         tabsRowPanel = new JPanel();
         viewTabsPanel = new JPanel();
         viewTabsScrollPane = new JScrollPane(
@@ -71,6 +82,8 @@ public class YamlWorkspacePanel {
         this.project = project;
         this.stateService = YamlWorkspaceStateService.getInstance(project);
         this.parserService = new YamlParserService();
+        this.propertiesValidatorService = new PropertiesValidatorService();
+        this.propertiesFormatterService = new PropertiesFormatterService();
         this.formatterService = new YamlFormatterService();
         this.compareDialogHandler = (views, parent) -> showCompareDialog(parent, views);
         this.errorNotifier = message -> JOptionPane.showMessageDialog(
@@ -81,10 +94,11 @@ public class YamlWorkspacePanel {
         );
         this.nativeDiffLauncher = (title, leftName, rightName, leftText, rightText) -> {
             DiffContentFactory factory = DiffContentFactory.getInstance();
+            FileType fileType = getCurrentFileType();
             SimpleDiffRequest request = new SimpleDiffRequest(
                     title,
-                    factory.create(project, leftText, YAMLFileType.YML),
-                    factory.create(project, rightText, YAMLFileType.YML),
+                    factory.create(project, leftText, fileType),
+                    factory.create(project, rightText, fileType),
                     leftName,
                     rightName
             );
@@ -105,6 +119,8 @@ public class YamlWorkspacePanel {
                        Runnable hideWorkspaceHandler) {
         this.stateService = stateService;
         this.parserService = parserService;
+        this.propertiesValidatorService = new PropertiesValidatorService();
+        this.propertiesFormatterService = new PropertiesFormatterService();
         this.formatterService = formatterService;
         this.compareDialogHandler = compareDialogHandler;
         this.errorNotifier = errorNotifier;
@@ -115,6 +131,7 @@ public class YamlWorkspacePanel {
 
         mainPanel = new JPanel(new BorderLayout());
         topBarPanel = new JPanel();
+        typeTabsPanel = new JPanel();
         tabsRowPanel = new JPanel();
         viewTabsPanel = new JPanel();
         viewTabsScrollPane = new JScrollPane(
@@ -148,6 +165,8 @@ public class YamlWorkspacePanel {
         mainPanel.setBackground(shellBackground);
         topBarPanel.setBackground(viewBarBackground);
         topBarPanel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        typeTabsPanel.setBackground(viewBarBackground);
+        typeTabsPanel.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
         tabsRowPanel.setBackground(viewBarBackground);
         viewTabsPanel.setBackground(viewBarBackground);
         viewTabsPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, VIEW_TAB_SCROLL_GUTTER, 0));
@@ -170,12 +189,15 @@ public class YamlWorkspacePanel {
 
     private void buildTopBar() {
         topBarPanel.setLayout(new BorderLayout());
+        typeTabsPanel.setLayout(new BoxLayout(typeTabsPanel, BoxLayout.X_AXIS));
         tabsRowPanel.setLayout(new BoxLayout(tabsRowPanel, BoxLayout.X_AXIS));
 
+        typeTabsPanel.setAlignmentY(Component.CENTER_ALIGNMENT);
         tabsRowPanel.setAlignmentY(Component.CENTER_ALIGNMENT);
         viewTabsScrollPane.setAlignmentY(Component.CENTER_ALIGNMENT);
         addViewButton.setAlignmentY(Component.CENTER_ALIGNMENT);
 
+        topBarPanel.add(typeTabsPanel, BorderLayout.NORTH);
         tabsRowPanel.add(viewTabsScrollPane);
         topBarPanel.add(tabsRowPanel, BorderLayout.CENTER);
     }
@@ -236,12 +258,13 @@ public class YamlWorkspacePanel {
     }
 
     void createNewView() {
-        stateService.createView("");
-        rebuildViewTabs(stateService.getViews().size() - 1);
+        WorkspaceContentType contentType = stateService.getSelectedContentType();
+        stateService.createView("", contentType);
+        rebuildViewTabs(stateService.getViews(contentType).size() - 1);
     }
 
     void compareViews() {
-        List<YamlViewState> views = stateService.getViews();
+        List<YamlViewState> views = stateService.getViews(stateService.getSelectedContentType());
         CompareSelection selection = compareDialogHandler.show(new ArrayList<>(views), mainPanel);
         if (selection == null) {
             return;
@@ -250,7 +273,8 @@ public class YamlWorkspacePanel {
         String validation = stateService.validateCompareSelection(
                 selection.getLeftViewId(),
                 selection.getRightViewId(),
-                parserService
+                parserService,
+                propertiesValidatorService
         );
         if (validation != null) {
             errorNotifier.show(validation);
@@ -280,7 +304,9 @@ public class YamlWorkspacePanel {
         }
 
         try {
-            String formatted = formatterService.beautify(currentView.getContent());
+            String formatted = currentView.getContentType() == WorkspaceContentType.PROPERTIES
+                    ? propertiesFormatterService.beautify(currentView.getContent())
+                    : formatterService.beautify(currentView.getContent());
             currentView.setContent(formatted);
             stateService.updateViewContent(currentView.getId(), formatted);
             rebuildViewTabs(tabbedPane.getSelectedIndex());
@@ -301,7 +327,7 @@ public class YamlWorkspacePanel {
             return;
         }
 
-        if (stateService.getViews().size() <= 1) {
+        if (stateService.getViews(stateService.getSelectedContentType()).size() <= 1) {
             return;
         }
 
@@ -309,7 +335,7 @@ public class YamlWorkspacePanel {
     }
 
     private void deleteView(String viewId, int tabIndex) {
-        if (stateService.getViews().size() <= 1) {
+        if (stateService.getViews(stateService.getSelectedContentType()).size() <= 1) {
             return;
         }
 
@@ -336,11 +362,15 @@ public class YamlWorkspacePanel {
 
     private void rebuildViewTabs(Integer preferredSelection) {
         tabbedPane.removeAll();
+        typeTabsPanel.removeAll();
         viewTabsPanel.removeAll();
         tabMetadata.clear();
 
+        buildTypeTabs();
+
         int viewIndex = 0;
-        for (YamlViewState view : stateService.getViews()) {
+        List<YamlViewState> currentViews = stateService.getViews(stateService.getSelectedContentType());
+        for (YamlViewState view : currentViews) {
             String title = getDisplayName(view, viewIndex + 1);
             addViewTab(view, title);
             addViewChip(view, title, viewIndex);
@@ -355,8 +385,20 @@ public class YamlWorkspacePanel {
         }
 
         updateViewTabSelection();
+        typeTabsPanel.revalidate();
+        typeTabsPanel.repaint();
         viewTabsPanel.revalidate();
         viewTabsPanel.repaint();
+    }
+
+    private void buildTypeTabs() {
+        WorkspaceContentType[] contentTypes = WorkspaceContentType.values();
+        for (int index = 0; index < contentTypes.length; index++) {
+            typeTabsPanel.add(new ContentTypeChip(contentTypes[index]));
+            if (index < contentTypes.length - 1) {
+                typeTabsPanel.add(Box.createHorizontalStrut(4));
+            }
+        }
     }
 
     private void addViewTab(YamlViewState view, String title) {
@@ -394,6 +436,10 @@ public class YamlWorkspacePanel {
         return tabsRowPanel;
     }
 
+    JPanel getTypeTabsPanel() {
+        return typeTabsPanel;
+    }
+
     JPanel getViewTabsPanel() {
         return viewTabsPanel;
     }
@@ -424,6 +470,12 @@ public class YamlWorkspacePanel {
         }
 
         addViewButton.setBackground(getViewTabBackground());
+    }
+
+    private FileType getCurrentFileType() {
+        return stateService.getSelectedContentType() == WorkspaceContentType.PROPERTIES
+                ? PropertiesFileType.INSTANCE
+                : YAMLFileType.YML;
     }
 
     private Color getShellBackground() {
@@ -583,6 +635,57 @@ public class YamlWorkspacePanel {
                             BorderFactory.createMatteBorder(0, 0, 0, 1, getViewTabSeparatorColor())
                     ),
                     BorderFactory.createEmptyBorder(2, 0, 2, 0)
+            );
+        }
+    }
+
+    private final class ContentTypeChip extends JPanel {
+        private final JLabel titleLabel;
+
+        private ContentTypeChip(WorkspaceContentType contentType) {
+            setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+            setOpaque(true);
+            setFocusable(false);
+            setBackground(getViewTabBackground());
+            setBorder(createTypeBorder(false));
+            setPreferredSize(new Dimension(TYPE_TAB_WIDTH, TYPE_TAB_HEIGHT));
+            setMinimumSize(new Dimension(TYPE_TAB_WIDTH, TYPE_TAB_HEIGHT));
+            setMaximumSize(new Dimension(TYPE_TAB_WIDTH, TYPE_TAB_HEIGHT));
+
+            titleLabel = new JLabel(contentType.getDisplayName());
+            titleLabel.setForeground(getSecondaryTextColor());
+            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.PLAIN, 11f));
+
+            add(Box.createHorizontalGlue());
+            add(titleLabel);
+            add(Box.createHorizontalGlue());
+
+            applySelection(stateService.getSelectedContentType() == contentType);
+
+            MouseAdapter selectListener = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent event) {
+                    stateService.setSelectedContentType(contentType);
+                    rebuildViewTabs(null);
+                }
+            };
+            addMouseListener(selectListener);
+            titleLabel.addMouseListener(selectListener);
+        }
+
+        private void applySelection(boolean selected) {
+            setBackground(selected ? getSelectedViewTabBackground() : getViewTabBackground());
+            setBorder(createTypeBorder(selected));
+            titleLabel.setForeground(selected ? getPrimaryTextColor() : getSecondaryTextColor());
+        }
+
+        private Border createTypeBorder(boolean selected) {
+            return BorderFactory.createCompoundBorder(
+                    BorderFactory.createCompoundBorder(
+                            BorderFactory.createMatteBorder(0, 0, 2, 0, selected ? getSelectionColor() : getViewTabBackground()),
+                            BorderFactory.createLineBorder(withAlpha(getViewTabSeparatorColor(), 0.7f), 1)
+                    ),
+                    BorderFactory.createEmptyBorder(1, 6, 1, 6)
             );
         }
     }

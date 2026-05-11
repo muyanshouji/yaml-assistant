@@ -2,13 +2,13 @@
 
 # Config Assistant
 
-Manage, format, and compare YAML faster without leaving IntelliJ IDEA.
+Manage, validate, format, and compare YAML or `.properties` configs faster without leaving IntelliJ IDEA.
 
-Config Assistant gives you a lightweight config workspace inside IntelliJ IDEA for temporary YAML inspection and comparison. It is especially useful when you are checking differences across environments, reviewing service migration configs, or debugging deployment issues without creating throwaway local files in your project.
+Config Assistant gives you a lightweight config workspace inside IntelliJ IDEA for temporary YAML and `.properties` inspection and comparison. It is especially useful when you are checking differences across environments, reviewing service migration configs, or debugging deployment issues without creating throwaway local files in your project.
 
 ## Why Config Assistant
 
-When you are comparing YAML from different environments, the usual workflow is noisy:
+When you are comparing configs from different environments, the usual workflow is noisy:
 
 - create a temporary local file in the project
 - paste one config into one file and another config into a second file
@@ -29,27 +29,29 @@ Typical use cases:
 
 ## Key Features
 
-- Multi-view YAML workspace inside IntelliJ IDEA
+- Multi-view YAML and `.properties` workspace inside IntelliJ IDEA
 - Project-level persisted views that survive IDE restart
-- Native IntelliJ diff between saved views
+- Native IntelliJ diff between saved views of the same type
 - In-place YAML formatting with comment preservation
-- Inline validation feedback while editing
-- No need to create temporary YAML files in your project
+- Inline YAML and `.properties` validation feedback while editing
+- No need to create temporary config files in your project
 
 ## Workflow
 
 1. Open `Config Assistant` from the tool window.
-2. Create one or more `View` tabs.
-3. Paste YAML from different environments or systems.
-4. Use `Format` to normalize the content.
-5. Use `Compare` to open IntelliJ's native diff.
+2. Choose `YAML` or `Properties`, then create one or more `View` tabs.
+3. Paste config content from different environments or systems.
+4. Use `Format` to normalize YAML or `.properties` content when needed.
+5. Use `Compare` to open IntelliJ's native diff for two views of the same type.
 6. Keep the views for later review without cluttering the repo.
 
 ## Feature Notes
 
 - The first tab is fixed as `View` and cannot be deleted.
 - Additional tabs use incremental names like `View 1`, `View 2`, and so on.
+- YAML and `Properties` keep independent view lists.
 - Compare opens IntelliJ's native diff viewer instead of an in-tool diff tab.
+- Format supports both YAML and `.properties` views.
 - Views are stored at the project level.
 - The workspace is designed for temporary config analysis, not committed config authoring.
 

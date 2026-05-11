@@ -1,5 +1,6 @@
 package com.muyan.yamlassistant.services;
 
+import com.muyan.yamlassistant.util.YamlPlaceholderSupport;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -17,6 +18,8 @@ import java.io.StringWriter;
  * 3. 使用配置后的 Yaml 实例重新输出为字符串
  */
 public class YamlFormatterService {
+
+    private final YamlPlaceholderSupport placeholderSupport = new YamlPlaceholderSupport();
 
     /**
      * 美化 YAML（块式风格，标准缩进）
@@ -48,11 +51,13 @@ public class YamlFormatterService {
      * @return 格式化后的 YAML 文本
      */
     public String format(String yamlText, int indent, int lineWidth, DumperOptions.FlowStyle flowStyle) {
+        YamlPlaceholderSupport.SanitizedYaml sanitizedYaml = placeholderSupport.sanitize(yamlText);
+
         // Parse the YAML AST instead of plain Java objects so comments survive formatting.
         LoaderOptions loaderOptions = new LoaderOptions();
         loaderOptions.setProcessComments(true);
         Yaml parser = new Yaml(loaderOptions);
-        Node node = parser.compose(new StringReader(yamlText));
+        Node node = parser.compose(new StringReader(sanitizedYaml.getText()));
 
         if (node == null) {
             return yamlText;
@@ -75,6 +80,6 @@ public class YamlFormatterService {
         Yaml dumper = new Yaml(options);
         StringWriter writer = new StringWriter();
         dumper.serialize(node, writer);
-        return writer.toString();
+        return placeholderSupport.restoreText(writer.toString(), sanitizedYaml);
     }
 }

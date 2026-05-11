@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.muyan"
-version = "1.0.3"
+version = "1.0.4"
 
 repositories {
     mavenCentral()
@@ -33,7 +33,8 @@ intellij {
     // 依赖的内置插件
     plugins.set(listOf(
         "com.intellij.java",     // Java 支持（可选）
-        "org.jetbrains.plugins.yaml" // YAML 语言支持
+        "org.jetbrains.plugins.yaml", // YAML 语言支持
+        "com.intellij.properties" // Properties 语言支持
     ))
 }
 
@@ -49,17 +50,6 @@ tasks {
         // 支持的 IDEA 版本范围
         sinceBuild.set("233")       // 2023.3+
         untilBuild.set("243.*")     // 到 2024.3.x
-        pluginDescription.set("""
-            <h2>Config Assistant</h2>
-            <p>A focused config workspace for viewing, formatting, diffing, and converting YAML in IntelliJ IDEA.</p>
-            <ul>
-                <li>Project-level multi-view config workspace</li>
-                <li>YAML formatting and validation</li>
-                <li>Native IntelliJ diff for saved views</li>
-                <li>YAML ↔ JSON conversion</li>
-                <li>Editor-first config utilities</li>
-            </ul>
-        """.trimIndent())
     }
 
     runIde {

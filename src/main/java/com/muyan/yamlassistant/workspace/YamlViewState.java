@@ -4,14 +4,20 @@ public class YamlViewState {
     private String id;
     private String name;
     private String content;
+    private WorkspaceContentType contentType;
 
     public YamlViewState() {
     }
 
     public YamlViewState(String id, String name, String content) {
+        this(id, name, content, WorkspaceContentType.YAML);
+    }
+
+    public YamlViewState(String id, String name, String content, WorkspaceContentType contentType) {
         this.id = id;
         this.name = name;
         this.content = content;
+        this.contentType = contentType;
     }
 
     public String getId() {
@@ -36,6 +42,14 @@ public class YamlViewState {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public WorkspaceContentType getContentType() {
+        return contentType != null ? contentType : WorkspaceContentType.YAML;
+    }
+
+    public void setContentType(WorkspaceContentType contentType) {
+        this.contentType = contentType != null ? contentType : WorkspaceContentType.YAML;
     }
 
     @Override

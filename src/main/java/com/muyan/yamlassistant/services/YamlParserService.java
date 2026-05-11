@@ -3,6 +3,7 @@ package com.muyan.yamlassistant.services;
 import com.muyan.yamlassistant.model.YamlDocument;
 import com.muyan.yamlassistant.model.YamlNode;
 import com.muyan.yamlassistant.model.YamlNode.NodeType;
+import com.muyan.yamlassistant.util.YamlPlaceholderSupport;
 import org.yaml.snakeyaml.Yaml;
 
 import java.util.List;
@@ -19,9 +20,11 @@ import java.util.Map;
 public class YamlParserService {
 
     private final Yaml yaml;
+    private final YamlPlaceholderSupport placeholderSupport;
 
     public YamlParserService() {
         this.yaml = new Yaml();
+        this.placeholderSupport = new YamlPlaceholderSupport();
     }
 
     /**
@@ -41,16 +44,18 @@ public class YamlParserService {
         }
 
         try {
+            YamlPlaceholderSupport.SanitizedYaml sanitizedYaml = placeholderSupport.sanitize(yamlText);
             // SnakeYAML loadAll 支持多文档（--- 分隔）
-            Iterable<Object> documents = yaml.loadAll(yamlText);
+            Iterable<Object> documents = yaml.loadAll(sanitizedYaml.getText());
             int docIndex = 0;
 
             for (Object doc : documents) {
                 YamlNode root = new YamlNode("Document " + docIndex, null, NodeType.MAPPING);
                 root.setPath("");
 
-                if (doc != null) {
-                    buildTree(root, doc, "");
+                Object restoredDoc = placeholderSupport.restoreObject(doc, sanitizedYaml);
+                if (restoredDoc != null) {
+                    buildTree(root, restoredDoc, "");
                 }
 
                 document.addRoot(root);
@@ -60,7 +65,7 @@ public class YamlParserService {
             document.setValid(true);
         } catch (Exception e) {
             document.setValid(false);
-            document.setErrorMessage("YAML parse error: " + e.getMessage());
+            document.setErrorMessage("YAML parse error: " + restoreErrorMessage(yamlText, e));
         }
 
         return document;
@@ -131,10 +136,19 @@ public class YamlParserService {
      */
     public String validate(String yamlText) {
         try {
-            yaml.load(yamlText);
+            YamlPlaceholderSupport.SanitizedYaml sanitizedYaml = placeholderSupport.sanitize(yamlText);
+            yaml.load(sanitizedYaml.getText());
             return null;
         } catch (Exception e) {
-            return e.getMessage();
+            return restoreErrorMessage(yamlText, e);
         }
+    }
+
+    private String restoreErrorMessage(String yamlText, Exception e) {
+        String message = e.getMessage();
+        if (message == null) {
+            return e.getClass().getSimpleName();
+        }
+        return placeholderSupport.restoreText(message, placeholderSupport.sanitize(yamlText));
     }
 }

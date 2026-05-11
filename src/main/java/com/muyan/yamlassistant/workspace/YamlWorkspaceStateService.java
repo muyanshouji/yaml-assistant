@@ -5,6 +5,7 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.components.StoragePathMacros;
 import com.intellij.openapi.project.Project;
+import com.muyan.yamlassistant.services.PropertiesValidatorService;
 import com.muyan.yamlassistant.services.YamlParserService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -23,6 +24,7 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
     public static class State {
         public List<YamlViewState> views = new ArrayList<>();
         public int nextViewIndex = 1;
+        public WorkspaceContentType selectedContentType = WorkspaceContentType.YAML;
     }
 
     private State state = new State();
@@ -45,24 +47,44 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
 
     public List<YamlViewState> getViews() {
         ensureAtLeastOneView();
-        return Collections.unmodifiableList(state.views);
+        return getViews(getSelectedContentType());
+    }
+
+    public List<YamlViewState> getViews(WorkspaceContentType contentType) {
+        List<YamlViewState> filteredViews = new ArrayList<>();
+        for (YamlViewState view : state.views) {
+            if (view.getContentType() == contentType) {
+                filteredViews.add(view);
+            }
+        }
+        return Collections.unmodifiableList(filteredViews);
     }
 
     public YamlViewState createView(String content) {
-        String name = state.views.isEmpty() ? "View" : "View " + nextViewIndex();
+        return createView(content, getSelectedContentType());
+    }
+
+    public YamlViewState createView(String content, WorkspaceContentType contentType) {
+        List<YamlViewState> typedViews = getViews(contentType);
+        String name = typedViews.isEmpty() ? "View" : "View " + nextViewIndex(contentType);
         YamlViewState view = new YamlViewState(
                 UUID.randomUUID().toString(),
                 name,
-                content
+                content,
+                contentType
         );
         state.views.add(view);
-        state.nextViewIndex = Math.max(state.nextViewIndex, nextViewIndex());
+        state.nextViewIndex = Math.max(state.nextViewIndex, nextViewIndex(contentType));
         return view;
     }
 
     public void ensureAtLeastOneView() {
-        if (state.views.isEmpty()) {
-            createView("");
+        ensureAtLeastOneView(getSelectedContentType());
+    }
+
+    public void ensureAtLeastOneView(WorkspaceContentType contentType) {
+        if (getViews(contentType).isEmpty()) {
+            createView("", contentType);
         }
     }
 
@@ -76,8 +98,19 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
     }
 
     public void deleteView(String id) {
+        WorkspaceContentType contentType = null;
+        for (YamlViewState view : state.views) {
+            if (view.getId().equals(id)) {
+                contentType = view.getContentType();
+                break;
+            }
+        }
         state.views.removeIf(view -> view.getId().equals(id));
-        ensureAtLeastOneView();
+        if (contentType != null) {
+            ensureAtLeastOneView(contentType);
+        } else {
+            ensureAtLeastOneView();
+        }
     }
 
     @Nullable
@@ -92,6 +125,14 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
 
     @Nullable
     public String validateCompareSelection(String leftViewId, String rightViewId, YamlParserService parserService) {
+        return validateCompareSelection(leftViewId, rightViewId, parserService, new PropertiesValidatorService());
+    }
+
+    @Nullable
+    public String validateCompareSelection(String leftViewId,
+                                           String rightViewId,
+                                           YamlParserService parserService,
+                                           PropertiesValidatorService propertiesValidatorService) {
         if (leftViewId == null || rightViewId == null) {
             return "Selected view no longer exists.";
         }
@@ -106,12 +147,16 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
             return "Selected view no longer exists.";
         }
 
-        String leftValidation = parserService.validate(leftView.getContent());
+        if (leftView.getContentType() != rightView.getContentType()) {
+            return "Please choose two views of the same content type.";
+        }
+
+        String leftValidation = validateView(leftView, parserService, propertiesValidatorService);
         if (leftValidation != null) {
             return "Left view is invalid: " + leftValidation;
         }
 
-        String rightValidation = parserService.validate(rightView.getContent());
+        String rightValidation = validateView(rightView, parserService, propertiesValidatorService);
         if (rightValidation != null) {
             return "Right view is invalid: " + rightValidation;
         }
@@ -119,10 +164,36 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
         return null;
     }
 
+    public WorkspaceContentType getSelectedContentType() {
+        return state.selectedContentType != null ? state.selectedContentType : WorkspaceContentType.YAML;
+    }
+
+    public void setSelectedContentType(WorkspaceContentType contentType) {
+        WorkspaceContentType previousContentType = getSelectedContentType();
+        WorkspaceContentType nextContentType = contentType != null ? contentType : WorkspaceContentType.YAML;
+        ensureAtLeastOneView(previousContentType);
+        state.selectedContentType = nextContentType;
+        ensureAtLeastOneView(nextContentType);
+    }
+
+    private String validateView(YamlViewState view,
+                                YamlParserService parserService,
+                                PropertiesValidatorService propertiesValidatorService) {
+        if (view.getContentType() == WorkspaceContentType.PROPERTIES) {
+            return propertiesValidatorService.validate(view.getContent());
+        }
+
+        return parserService.validate(view.getContent());
+    }
+
     private State normalizeState(@Nullable State loadedState) {
         State normalizedState = new State();
         if (loadedState == null || loadedState.views == null) {
             return normalizedState;
+        }
+
+        if (loadedState.selectedContentType != null) {
+            normalizedState.selectedContentType = loadedState.selectedContentType;
         }
 
         int maxViewIndex = 0;
@@ -146,14 +217,19 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
                 name = normalizedState.views.isEmpty() ? "View" : "View " + (maxViewIndex + 1);
             }
 
-            normalizedState.views.add(new YamlViewState(id, name, content));
-            maxViewIndex = Math.max(maxViewIndex, parseViewIndex(name));
+            WorkspaceContentType contentType = view.getContentType();
+            normalizedState.views.add(new YamlViewState(id, name, content, contentType));
+            if (contentType == WorkspaceContentType.YAML) {
+                maxViewIndex = Math.max(maxViewIndex, parseViewIndex(name));
+            }
         }
 
-        migrateLegacyDefaultViewNames(normalizedState.views);
+        migrateLegacyDefaultViewNames(normalizedState.views, WorkspaceContentType.YAML);
         maxViewIndex = 0;
         for (YamlViewState view : normalizedState.views) {
-            maxViewIndex = Math.max(maxViewIndex, parseViewIndex(view.getName()));
+            if (view.getContentType() == WorkspaceContentType.YAML) {
+                maxViewIndex = Math.max(maxViewIndex, parseViewIndex(view.getName()));
+            }
         }
 
         normalizedState.nextViewIndex = Math.max(loadedState.nextViewIndex, maxViewIndex + 1);
@@ -174,34 +250,43 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
         return 0;
     }
 
-    private int nextViewIndex() {
+    private int nextViewIndex(WorkspaceContentType contentType) {
         int maxViewIndex = 0;
         for (YamlViewState view : state.views) {
-            maxViewIndex = Math.max(maxViewIndex, parseViewIndex(view.getName()));
+            if (view.getContentType() == contentType) {
+                maxViewIndex = Math.max(maxViewIndex, parseViewIndex(view.getName()));
+            }
         }
         return maxViewIndex + 1;
     }
 
-    private void migrateLegacyDefaultViewNames(List<YamlViewState> views) {
-        if (views.isEmpty()) {
+    private void migrateLegacyDefaultViewNames(List<YamlViewState> views, WorkspaceContentType contentType) {
+        List<YamlViewState> filteredViews = new ArrayList<>();
+        for (YamlViewState view : views) {
+            if (view.getContentType() == contentType) {
+                filteredViews.add(view);
+            }
+        }
+
+        if (filteredViews.isEmpty()) {
             return;
         }
 
-        int firstIndex = parseViewIndex(views.get(0).getName());
+        int firstIndex = parseViewIndex(filteredViews.get(0).getName());
         if (firstIndex <= 0) {
             return;
         }
 
-        for (int index = 0; index < views.size(); index++) {
+        for (int index = 0; index < filteredViews.size(); index++) {
             int expectedIndex = firstIndex + index;
-            if (!("View " + expectedIndex).equals(views.get(index).getName())) {
+            if (!("View " + expectedIndex).equals(filteredViews.get(index).getName())) {
                 return;
             }
         }
 
-        views.get(0).setName("View");
-        for (int index = 1; index < views.size(); index++) {
-            views.get(index).setName("View " + index);
+        filteredViews.get(0).setName("View");
+        for (int index = 1; index < filteredViews.size(); index++) {
+            filteredViews.get(index).setName("View " + index);
         }
     }
 }

@@ -5,6 +5,7 @@ import com.muyan.yamlassistant.services.YamlFormatterService;
 import com.muyan.yamlassistant.services.YamlParserService;
 import com.muyan.yamlassistant.workspace.YamlViewState;
 import com.muyan.yamlassistant.workspace.YamlWorkspaceStateService;
+import com.muyan.yamlassistant.workspace.WorkspaceContentType;
 import org.junit.Test;
 
 import javax.swing.*;
@@ -48,6 +49,53 @@ public class YamlWorkspacePanelTest {
         runOnEdt(() -> panel.setContent("name: fixed"));
 
         assertEquals("name: fixed", view.getContent());
+        assertEquals("Parsed successfully", panel.getStatusLabel().getText());
+        assertEquals(new Color(0x7BC275), panel.getStatusIndicator().getBackground());
+    }
+
+    @Test
+    public void testViewTabPanelSupportsPropertiesValidation() throws Exception {
+        YamlViewState view = new YamlViewState("view-1", "View", "server.port=8080", WorkspaceContentType.PROPERTIES);
+        List<String> updates = new ArrayList<>();
+
+        YamlViewTabPanel panel = runOnEdt(() -> new YamlViewTabPanel(view, null, parserService, updates::add));
+        runOnEdt(() -> panel.setContent("server.port=8080\ninvalid\\u00ZZ"));
+
+        assertEquals("Properties error", panel.getStatusLabel().getText());
+        assertEquals(new Color(0xE06C75), panel.getStatusIndicator().getBackground());
+    }
+
+    @Test
+    public void testViewTabPanelRejectsYamlLikeContentInPropertiesMode() throws Exception {
+        YamlViewState view = new YamlViewState("view-1", "View", "server.port=8080", WorkspaceContentType.PROPERTIES);
+        List<String> updates = new ArrayList<>();
+
+        YamlViewTabPanel panel = runOnEdt(() -> new YamlViewTabPanel(view, null, parserService, updates::add));
+        runOnEdt(() -> panel.setContent("spring:\n  application:\n    name: shop\n"));
+
+        assertEquals("Properties error", panel.getStatusLabel().getText());
+        assertEquals(new Color(0xE06C75), panel.getStatusIndicator().getBackground());
+    }
+
+    @Test
+    public void testViewTabPanelRejectsPropertiesWithoutEqualsSeparator() throws Exception {
+        YamlViewState view = new YamlViewState("view-1", "View", "server.port=8080", WorkspaceContentType.PROPERTIES);
+        List<String> updates = new ArrayList<>();
+
+        YamlViewTabPanel panel = runOnEdt(() -> new YamlViewTabPanel(view, null, parserService, updates::add));
+        runOnEdt(() -> panel.setContent("spring.datasource.password"));
+
+        assertEquals("Properties error", panel.getStatusLabel().getText());
+        assertEquals(new Color(0xE06C75), panel.getStatusIndicator().getBackground());
+    }
+
+    @Test
+    public void testViewTabPanelAcceptsMavenStyleYamlPlaceholders() throws Exception {
+        YamlViewState view = new YamlViewState("view-1", "View", "spring:\n  profiles:\n    active: @profileActive@\n");
+        List<String> updates = new ArrayList<>();
+
+        YamlViewTabPanel panel = runOnEdt(() -> new YamlViewTabPanel(view, null, parserService, updates::add));
+
         assertEquals("Parsed successfully", panel.getStatusLabel().getText());
         assertEquals(new Color(0x7BC275), panel.getStatusIndicator().getBackground());
     }
@@ -208,6 +256,31 @@ public class YamlWorkspacePanelTest {
     }
 
     @Test
+    public void testWorkspacePanelFormatsCurrentPropertiesViewContent() throws Exception {
+        YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
+        stateService.setSelectedContentType(WorkspaceContentType.PROPERTIES);
+        YamlViewState view = stateService.getViews(WorkspaceContentType.PROPERTIES).get(0);
+        stateService.updateViewContent(view.getId(), " server.port : 8080\nspring.application.name    shop\n");
+
+        YamlWorkspacePanel panel = runOnEdt(() -> new YamlWorkspacePanel(
+                stateService,
+                parserService,
+                formatterService,
+                (views, parent) -> null,
+                message -> {
+                },
+                (title, leftName, rightName, leftText, rightText) -> {
+                },
+                () -> {
+                }
+        ));
+
+        runOnEdt(panel::formatCurrentView);
+
+        assertEquals("server.port=8080\nspring.application.name=shop\n", stateService.getView(view.getId()).getContent());
+    }
+
+    @Test
     public void testWorkspacePanelDeletingLastViewDoesNothing() throws Exception {
         YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
         stateService.ensureAtLeastOneView();
@@ -360,6 +433,8 @@ public class YamlWorkspacePanelTest {
         assertNotNull(tabsScrollPane);
         assertSame(tabsRow, tabsScrollPane.getParent());
         assertSame(panel.getViewTabsPanel(), panel.getAddViewButton().getParent());
+        assertSame(topBar, panel.getTypeTabsPanel().getParent());
+        assertTrue(panel.getTypeTabsPanel().getComponentCount() >= 2);
     }
 
     @Test
