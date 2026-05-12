@@ -2,7 +2,15 @@
 
 # Config Assistant
 
-Manage, validate, format, and compare YAML or `.properties` configs faster without leaving IntelliJ IDEA.
+[![JetBrains Plugin Version](https://img.shields.io/jetbrains/plugin/v/31658?label=Marketplace)](https://plugins.jetbrains.com/plugin/31658-config-assistant)
+[![JetBrains Plugin Downloads](https://img.shields.io/jetbrains/plugin/d/31658)](https://plugins.jetbrains.com/plugin/31658-config-assistant)
+[![GitHub Release](https://img.shields.io/github/v/release/muyanshouji/config-assistant)](https://github.com/muyanshouji/config-assistant/releases)
+[![Build](https://github.com/muyanshouji/config-assistant/actions/workflows/build.yml/badge.svg)](https://github.com/muyanshouji/config-assistant/actions/workflows/build.yml)
+![IntelliJ IDEA 2023.3+](https://img.shields.io/badge/IntelliJ%20IDEA-2023.3%2B-000000?logo=intellijidea)
+
+Inspect, validate, format, and compare YAML or `.properties` configs faster inside IntelliJ IDEA.
+
+**Quick links:** [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/31658-config-assistant) · [GitHub Releases](https://github.com/muyanshouji/config-assistant/releases) · [Latest Release](https://github.com/muyanshouji/config-assistant/releases/latest) · [Report an Issue](https://github.com/muyanshouji/config-assistant/issues)
 
 Config Assistant gives you a lightweight config workspace inside IntelliJ IDEA for temporary YAML and `.properties` inspection and comparison. It is especially useful when you are checking differences across environments, reviewing service migration configs, or debugging deployment issues without creating throwaway local files in your project.
 
@@ -59,7 +67,13 @@ Typical use cases:
 
 ### JetBrains Marketplace
 
-Install `Config Assistant` from JetBrains Marketplace.
+[Install `Config Assistant` from JetBrains Marketplace](https://plugins.jetbrains.com/plugin/31658-config-assistant).
+
+New Marketplace uploads may take a short review cycle before the latest version appears publicly.
+
+### GitHub Release ZIP
+
+[Download the latest plugin ZIP from GitHub Releases](https://github.com/muyanshouji/config-assistant/releases/latest).
 
 ### Local ZIP
 

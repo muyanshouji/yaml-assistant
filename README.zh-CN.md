@@ -2,7 +2,15 @@
 
 # Config Assistant
 
+[![JetBrains Plugin Version](https://img.shields.io/jetbrains/plugin/v/31658?label=Marketplace)](https://plugins.jetbrains.com/plugin/31658-config-assistant)
+[![JetBrains Plugin Downloads](https://img.shields.io/jetbrains/plugin/d/31658)](https://plugins.jetbrains.com/plugin/31658-config-assistant)
+[![GitHub Release](https://img.shields.io/github/v/release/muyanshouji/config-assistant)](https://github.com/muyanshouji/config-assistant/releases)
+[![Build](https://github.com/muyanshouji/config-assistant/actions/workflows/build.yml/badge.svg)](https://github.com/muyanshouji/config-assistant/actions/workflows/build.yml)
+![IntelliJ IDEA 2023.3+](https://img.shields.io/badge/IntelliJ%20IDEA-2023.3%2B-000000?logo=intellijidea)
+
 一个直接工作在 IntelliJ IDEA 里的配置工作区，用来更快地查看、校验、整理和对比 YAML 与 `.properties` 内容。
+
+**快速链接：** [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/31658-config-assistant) · [GitHub Releases](https://github.com/muyanshouji/config-assistant/releases) · [最新版本](https://github.com/muyanshouji/config-assistant/releases/latest) · [反馈问题](https://github.com/muyanshouji/config-assistant/issues)
 
 Config Assistant 的核心目标很简单：当你在排查服务迁移问题、核对不同环境配置、或者检查线上问题时，不需要再在本地项目里临时新建配置文件、粘贴内容、对比完再删除。
 
@@ -61,7 +69,13 @@ Config Assistant 就是为了解决这类低效操作。
 
 ### JetBrains Marketplace
 
-在 JetBrains Marketplace 搜索并安装 `Config Assistant`。
+[从 JetBrains Marketplace 安装 `Config Assistant`](https://plugins.jetbrains.com/plugin/31658-config-assistant)。
+
+新版本可能需要等待 JetBrains 审核后才会显示。
+
+### GitHub Release ZIP
+
+[从 GitHub Releases 下载最新插件 ZIP](https://github.com/muyanshouji/config-assistant/releases/latest)。
 
 ### 本地 ZIP 安装
 
