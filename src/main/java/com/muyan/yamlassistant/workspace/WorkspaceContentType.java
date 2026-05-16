@@ -2,7 +2,8 @@ package com.muyan.yamlassistant.workspace;
 
 public enum WorkspaceContentType {
     YAML("YAML"),
-    PROPERTIES("Properties");
+    PROPERTIES("Properties"),
+    JSON("JSON");
 
     private final String displayName;
 

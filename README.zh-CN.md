@@ -8,13 +8,13 @@
 [![Build](https://github.com/muyanshouji/config-assistant/actions/workflows/build.yml/badge.svg)](https://github.com/muyanshouji/config-assistant/actions/workflows/build.yml)
 ![IntelliJ IDEA 2023.3+](https://img.shields.io/badge/IntelliJ%20IDEA-2023.3%2B-000000?logo=intellijidea)
 
-一个直接工作在 IntelliJ IDEA 里的配置工作区，用来更快地查看、校验、整理和对比 YAML 与 `.properties` 内容。
+一个直接工作在 IntelliJ IDEA 里的配置工作区，用来更快地查看、校验、整理和对比 YAML、JSON 与 `.properties` 内容。
 
 **快速链接：** [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/31658-config-assistant) · [GitHub Releases](https://github.com/muyanshouji/config-assistant/releases) · [最新版本](https://github.com/muyanshouji/config-assistant/releases/latest) · [反馈问题](https://github.com/muyanshouji/config-assistant/issues)
 
 Config Assistant 的核心目标很简单：当你在排查服务迁移问题、核对不同环境配置、或者检查线上问题时，不需要再在本地项目里临时新建配置文件、粘贴内容、对比完再删除。
 
-它提供了一个独立的 config workspace，让你在 IDEA 里直接保存多个 YAML 或 `.properties` 临时视图，随时校验、格式化、对比，并在项目级别持久化这些内容。
+它提供了一个独立的 config workspace，让你在 IDEA 里直接保存多个 YAML、JSON 或 `.properties` 临时视图，随时校验、格式化、对比，并在项目级别持久化这些内容。
 
 ## 为什么做这个插件
 
@@ -39,7 +39,7 @@ Config Assistant 就是为了解决这类低效操作。
 
 ## 核心能力
 
-- IntelliJ IDEA 内置的多视图 YAML / `.properties` 工作区
+- IntelliJ IDEA 内置的多视图 YAML / JSON / `.properties` 工作区
 - 项目级持久化视图，重启 IDE 后仍可恢复
 - 使用 IntelliJ 原生 Diff 对比同类型的已保存视图
 - 原地格式化 YAML，并尽量保留注释
@@ -49,9 +49,9 @@ Config Assistant 就是为了解决这类低效操作。
 ## 使用流程
 
 1. 打开 `Config Assistant` 工具窗口。
-2. 选择 `YAML` 或 `Properties`，然后创建一个或多个 `View`。
+2. 选择 `YAML`、`JSON` 或 `Properties`，然后创建一个或多个 `View`。
 3. 粘贴不同环境、不同服务或不同版本的配置内容。
-4. 需要时用 `Format` 整理 YAML 或 `.properties` 内容。
+4. 需要时用 `Format` 整理 YAML、JSON 或 `.properties` 内容。
 5. 用 `Compare` 打开同类型视图之间的 IntelliJ 原生 Diff。
 6. 保留这些视图，后续继续排查，不污染仓库。
 
@@ -59,9 +59,9 @@ Config Assistant 就是为了解决这类低效操作。
 
 - 第一个 tab 固定为 `View`，不可删除。
 - 后续 tab 按 `View 1`、`View 2` 递增命名。
-- YAML 和 `Properties` 各自维护独立视图列表。
+- YAML、`JSON` 和 `Properties` 各自维护独立视图列表。
 - 对比使用 IntelliJ 原生 Diff，不在工具窗口里额外维护 Diff tab。
-- `Format` 支持 YAML 和 `Properties` 视图。
+- `Format` 支持 YAML、JSON 和 `Properties` 视图。
 - 所有视图都按项目维度保存。
 - 这个 workspace 更适合临时配置分析和比对，不是替代正式配置文件管理。
 

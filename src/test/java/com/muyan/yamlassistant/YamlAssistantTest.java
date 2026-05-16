@@ -5,6 +5,8 @@ import com.muyan.yamlassistant.diff.YamlDiffService;
 import com.muyan.yamlassistant.model.YamlDocument;
 import com.muyan.yamlassistant.model.YamlNode;
 import com.muyan.yamlassistant.services.YamlConverterService;
+import com.muyan.yamlassistant.services.JsonFormatterService;
+import com.muyan.yamlassistant.services.JsonValidatorService;
 import com.muyan.yamlassistant.services.YamlFormatterService;
 import com.muyan.yamlassistant.services.YamlParserService;
 import com.muyan.yamlassistant.services.PropertiesFormatterService;
@@ -24,6 +26,8 @@ public class YamlAssistantTest {
 
     private final YamlParserService parserService = new YamlParserService();
     private final YamlFormatterService formatterService = new YamlFormatterService();
+    private final JsonFormatterService jsonFormatterService = new JsonFormatterService();
+    private final JsonValidatorService jsonValidatorService = new JsonValidatorService();
     private final PropertiesFormatterService propertiesFormatterService = new PropertiesFormatterService();
     private final PropertiesValidatorService propertiesValidatorService = new PropertiesValidatorService();
     private final YamlConverterService converterService = new YamlConverterService();
@@ -180,6 +184,26 @@ public class YamlAssistantTest {
         );
     }
 
+    @Test
+    public void testValidateJsonAcceptsObject() {
+        assertNull(jsonValidatorService.validate("{\"name\":\"shop\",\"port\":8080}"));
+    }
+
+    @Test
+    public void testValidateJsonRejectsBrokenContent() {
+        String validation = jsonValidatorService.validate("{\"name\": }\n");
+
+        assertNotNull(validation);
+    }
+
+    @Test
+    public void testBeautifyJsonPrettyPrintsContent() {
+        String result = jsonFormatterService.beautify("{\"name\":\"shop\",\"port\":8080}");
+
+        assertTrue(result.contains("\"name\": \"shop\""));
+        assertTrue(result.contains("\n  \"port\": 8080\n"));
+    }
+
     // ==================== Converter Tests ====================
 
     @Test
@@ -243,6 +267,32 @@ public class YamlAssistantTest {
         assertEquals("View 2", second.getName());
         assertEquals(3, service.getViews(WorkspaceContentType.PROPERTIES).size());
         assertEquals(1, service.getViews(WorkspaceContentType.YAML).size());
+    }
+
+    @Test
+    public void testWorkspaceStateSupportsIndependentJsonViews() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+
+        service.setSelectedContentType(WorkspaceContentType.JSON);
+        YamlViewState first = service.createView("{\"name\":\"alpha\"}", WorkspaceContentType.JSON);
+        YamlViewState second = service.createView("{\"name\":\"beta\"}", WorkspaceContentType.JSON);
+
+        assertEquals("View 1", first.getName());
+        assertEquals("View 2", second.getName());
+        assertEquals(3, service.getViews(WorkspaceContentType.JSON).size());
+        assertEquals(1, service.getViews(WorkspaceContentType.YAML).size());
+        assertEquals(0, service.getViews(WorkspaceContentType.PROPERTIES).size());
+    }
+
+    @Test
+    public void testWorkspaceStateTracksLineNumberPreference() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+
+        assertTrue(service.isShowLineNumbers());
+
+        service.setShowLineNumbers(false);
+
+        assertFalse(service.isShowLineNumbers());
     }
 
     @Test
@@ -411,6 +461,18 @@ public class YamlAssistantTest {
                 "Please choose two views of the same content type.",
                 service.validateCompareSelection(yamlView.getId(), propertiesView.getId(), parserService)
         );
+    }
+
+    @Test
+    public void testValidateCompareSelectionRejectsInvalidJsonView() {
+        YamlWorkspaceStateService service = new YamlWorkspaceStateService();
+        YamlViewState left = service.createView("{\"name\":\"before\"}", WorkspaceContentType.JSON);
+        YamlViewState right = service.createView("{\"name\": }", WorkspaceContentType.JSON);
+
+        String validation = service.validateCompareSelection(left.getId(), right.getId(), parserService);
+
+        assertNotNull(validation);
+        assertTrue(validation.startsWith("Right view is invalid:"));
     }
 
     @Test

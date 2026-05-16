@@ -4,12 +4,15 @@ import com.intellij.diff.DiffContentFactory;
 import com.intellij.diff.DiffManager;
 import com.intellij.diff.requests.SimpleDiffRequest;
 import com.intellij.icons.AllIcons;
+import com.intellij.json.JsonFileType;
 import com.intellij.lang.properties.PropertiesFileType;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.DumbAwareAction;
+import com.muyan.yamlassistant.services.JsonFormatterService;
+import com.muyan.yamlassistant.services.JsonValidatorService;
 import com.muyan.yamlassistant.services.PropertiesValidatorService;
 import com.muyan.yamlassistant.services.PropertiesFormatterService;
 import com.muyan.yamlassistant.services.YamlFormatterService;
@@ -58,13 +61,15 @@ public class YamlWorkspacePanel {
     private final YamlParserService parserService;
     private final PropertiesValidatorService propertiesValidatorService;
     private final PropertiesFormatterService propertiesFormatterService;
+    private final JsonValidatorService jsonValidatorService;
+    private final JsonFormatterService jsonFormatterService;
     private final YamlFormatterService formatterService;
     private final Project project;
     private final CompareDialogHandler compareDialogHandler;
     private final ErrorNotifier errorNotifier;
     private final NativeDiffLauncher nativeDiffLauncher;
     private final WorkspaceToolbarAction newViewAction;
-    private final List<WorkspaceToolbarAction> workspaceActions;
+    private final List<AnAction> workspaceActions;
     private final Map<Component, TabMetadata> tabMetadata = new IdentityHashMap<>();
 
     public YamlWorkspacePanel(Project project, Runnable hideWorkspaceHandler) {
@@ -84,6 +89,8 @@ public class YamlWorkspacePanel {
         this.parserService = new YamlParserService();
         this.propertiesValidatorService = new PropertiesValidatorService();
         this.propertiesFormatterService = new PropertiesFormatterService();
+        this.jsonValidatorService = new JsonValidatorService();
+        this.jsonFormatterService = new JsonFormatterService();
         this.formatterService = new YamlFormatterService();
         this.compareDialogHandler = (views, parent) -> showCompareDialog(parent, views);
         this.errorNotifier = message -> JOptionPane.showMessageDialog(
@@ -121,6 +128,8 @@ public class YamlWorkspacePanel {
         this.parserService = parserService;
         this.propertiesValidatorService = new PropertiesValidatorService();
         this.propertiesFormatterService = new PropertiesFormatterService();
+        this.jsonValidatorService = new JsonValidatorService();
+        this.jsonFormatterService = new JsonFormatterService();
         this.formatterService = formatterService;
         this.compareDialogHandler = compareDialogHandler;
         this.errorNotifier = errorNotifier;
@@ -236,10 +245,11 @@ public class YamlWorkspacePanel {
         return button;
     }
 
-    private List<WorkspaceToolbarAction> createWorkspaceActions() {
-        List<WorkspaceToolbarAction> actions = new ArrayList<>();
+    private List<AnAction> createWorkspaceActions() {
+        List<AnAction> actions = new ArrayList<>();
         actions.add(new WorkspaceToolbarAction("Compare", AllIcons.Actions.Diff, this::compareViews));
         actions.add(new WorkspaceToolbarAction("Format", AllIcons.Actions.ReformatCode, this::formatCurrentView));
+        actions.add(new WorkspaceToolbarAction("Line Numbers", AllIcons.Actions.Show, this::toggleLineNumbers));
         return Collections.unmodifiableList(actions);
     }
 
@@ -274,7 +284,8 @@ public class YamlWorkspacePanel {
                 selection.getLeftViewId(),
                 selection.getRightViewId(),
                 parserService,
-                propertiesValidatorService
+                propertiesValidatorService,
+                jsonValidatorService
         );
         if (validation != null) {
             errorNotifier.show(validation);
@@ -304,9 +315,14 @@ public class YamlWorkspacePanel {
         }
 
         try {
-            String formatted = currentView.getContentType() == WorkspaceContentType.PROPERTIES
-                    ? propertiesFormatterService.beautify(currentView.getContent())
-                    : formatterService.beautify(currentView.getContent());
+            String formatted;
+            if (currentView.getContentType() == WorkspaceContentType.PROPERTIES) {
+                formatted = propertiesFormatterService.beautify(currentView.getContent());
+            } else if (currentView.getContentType() == WorkspaceContentType.JSON) {
+                formatted = jsonFormatterService.beautify(currentView.getContent());
+            } else {
+                formatted = formatterService.beautify(currentView.getContent());
+            }
             currentView.setContent(formatted);
             stateService.updateViewContent(currentView.getId(), formatted);
             rebuildViewTabs(tabbedPane.getSelectedIndex());
@@ -406,6 +422,7 @@ public class YamlWorkspacePanel {
                 view,
                 project,
                 parserService,
+                stateService.isShowLineNumbers(),
                 content -> stateService.updateViewContent(view.getId(), content)
         );
         JPanel component = viewTabPanel.getMainPanel();
@@ -472,10 +489,19 @@ public class YamlWorkspacePanel {
         addViewButton.setBackground(getViewTabBackground());
     }
 
+    private void toggleLineNumbers() {
+        stateService.setShowLineNumbers(!stateService.isShowLineNumbers());
+        rebuildViewTabs(tabbedPane.getSelectedIndex());
+    }
+
     private FileType getCurrentFileType() {
-        return stateService.getSelectedContentType() == WorkspaceContentType.PROPERTIES
-                ? PropertiesFileType.INSTANCE
-                : YAMLFileType.YML;
+        if (stateService.getSelectedContentType() == WorkspaceContentType.PROPERTIES) {
+            return PropertiesFileType.INSTANCE;
+        }
+        if (stateService.getSelectedContentType() == WorkspaceContentType.JSON) {
+            return JsonFileType.INSTANCE;
+        }
+        return YAMLFileType.YML;
     }
 
     private Color getShellBackground() {

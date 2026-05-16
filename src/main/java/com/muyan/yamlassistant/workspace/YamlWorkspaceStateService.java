@@ -5,6 +5,7 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.components.StoragePathMacros;
 import com.intellij.openapi.project.Project;
+import com.muyan.yamlassistant.services.JsonValidatorService;
 import com.muyan.yamlassistant.services.PropertiesValidatorService;
 import com.muyan.yamlassistant.services.YamlParserService;
 import org.jetbrains.annotations.NotNull;
@@ -25,6 +26,7 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
         public List<YamlViewState> views = new ArrayList<>();
         public int nextViewIndex = 1;
         public WorkspaceContentType selectedContentType = WorkspaceContentType.YAML;
+        public boolean showLineNumbers = true;
     }
 
     private State state = new State();
@@ -125,14 +127,21 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
 
     @Nullable
     public String validateCompareSelection(String leftViewId, String rightViewId, YamlParserService parserService) {
-        return validateCompareSelection(leftViewId, rightViewId, parserService, new PropertiesValidatorService());
+        return validateCompareSelection(
+                leftViewId,
+                rightViewId,
+                parserService,
+                new PropertiesValidatorService(),
+                new JsonValidatorService()
+        );
     }
 
     @Nullable
     public String validateCompareSelection(String leftViewId,
                                            String rightViewId,
                                            YamlParserService parserService,
-                                           PropertiesValidatorService propertiesValidatorService) {
+                                           PropertiesValidatorService propertiesValidatorService,
+                                           JsonValidatorService jsonValidatorService) {
         if (leftViewId == null || rightViewId == null) {
             return "Selected view no longer exists.";
         }
@@ -151,12 +160,12 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
             return "Please choose two views of the same content type.";
         }
 
-        String leftValidation = validateView(leftView, parserService, propertiesValidatorService);
+        String leftValidation = validateView(leftView, parserService, propertiesValidatorService, jsonValidatorService);
         if (leftValidation != null) {
             return "Left view is invalid: " + leftValidation;
         }
 
-        String rightValidation = validateView(rightView, parserService, propertiesValidatorService);
+        String rightValidation = validateView(rightView, parserService, propertiesValidatorService, jsonValidatorService);
         if (rightValidation != null) {
             return "Right view is invalid: " + rightValidation;
         }
@@ -176,11 +185,24 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
         ensureAtLeastOneView(nextContentType);
     }
 
+    public boolean isShowLineNumbers() {
+        return state.showLineNumbers;
+    }
+
+    public void setShowLineNumbers(boolean showLineNumbers) {
+        state.showLineNumbers = showLineNumbers;
+    }
+
     private String validateView(YamlViewState view,
                                 YamlParserService parserService,
-                                PropertiesValidatorService propertiesValidatorService) {
+                                PropertiesValidatorService propertiesValidatorService,
+                                JsonValidatorService jsonValidatorService) {
         if (view.getContentType() == WorkspaceContentType.PROPERTIES) {
             return propertiesValidatorService.validate(view.getContent());
+        }
+
+        if (view.getContentType() == WorkspaceContentType.JSON) {
+            return jsonValidatorService.validate(view.getContent());
         }
 
         return parserService.validate(view.getContent());
@@ -195,6 +217,7 @@ public class YamlWorkspaceStateService implements PersistentStateComponent<YamlW
         if (loadedState.selectedContentType != null) {
             normalizedState.selectedContentType = loadedState.selectedContentType;
         }
+        normalizedState.showLineNumbers = loadedState.showLineNumbers;
 
         int maxViewIndex = 0;
         for (YamlViewState view : loadedState.views) {

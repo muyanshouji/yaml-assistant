@@ -101,6 +101,39 @@ public class YamlWorkspacePanelTest {
     }
 
     @Test
+    public void testViewTabPanelCanHideLineNumbers() throws Exception {
+        YamlViewState view = new YamlViewState("view-1", "View", "name: test");
+        List<String> updates = new ArrayList<>();
+
+        YamlViewTabPanel panel = runOnEdt(() -> new YamlViewTabPanel(view, null, parserService, false, updates::add));
+
+        assertFalse(panel.isLineNumbersShown());
+    }
+
+    @Test
+    public void testViewTabPanelSupportsJsonValidation() throws Exception {
+        YamlViewState view = new YamlViewState("view-1", "View", "{\"name\":\"shop\"}", WorkspaceContentType.JSON);
+        List<String> updates = new ArrayList<>();
+
+        YamlViewTabPanel panel = runOnEdt(() -> new YamlViewTabPanel(view, null, parserService, updates::add));
+        runOnEdt(() -> panel.setContent("{\"name\": }"));
+
+        assertEquals("JSON error", panel.getStatusLabel().getText());
+        assertEquals(new Color(0xE06C75), panel.getStatusIndicator().getBackground());
+    }
+
+    @Test
+    public void testViewTabPanelAcceptsValidJson() throws Exception {
+        YamlViewState view = new YamlViewState("view-1", "View", "{\"name\":\"shop\"}", WorkspaceContentType.JSON);
+        List<String> updates = new ArrayList<>();
+
+        YamlViewTabPanel panel = runOnEdt(() -> new YamlViewTabPanel(view, null, parserService, updates::add));
+
+        assertEquals("Parsed successfully", panel.getStatusLabel().getText());
+        assertEquals(new Color(0x7BC275), panel.getStatusIndicator().getBackground());
+    }
+
+    @Test
     public void testWorkspacePanelLoadsPersistedViewsAndCreatesNewView() throws Exception {
         YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
         stateService.createView("alpha: 1");
@@ -281,6 +314,54 @@ public class YamlWorkspacePanelTest {
     }
 
     @Test
+    public void testWorkspacePanelFormatsCurrentJsonViewContent() throws Exception {
+        YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
+        stateService.setSelectedContentType(WorkspaceContentType.JSON);
+        YamlViewState view = stateService.getViews(WorkspaceContentType.JSON).get(0);
+        stateService.updateViewContent(view.getId(), "{\"name\":\"shop\",\"port\":8080}");
+
+        YamlWorkspacePanel panel = runOnEdt(() -> new YamlWorkspacePanel(
+                stateService,
+                parserService,
+                formatterService,
+                (views, parent) -> null,
+                message -> {
+                },
+                (title, leftName, rightName, leftText, rightText) -> {
+                },
+                () -> {
+                }
+        ));
+
+        runOnEdt(panel::formatCurrentView);
+
+        String content = stateService.getView(view.getId()).getContent();
+        assertTrue(content.contains("\"name\": \"shop\""));
+        assertTrue(content.contains("\n  \"port\": 8080\n"));
+    }
+
+    @Test
+    public void testWorkspacePanelBuildsJsonTypeTab() throws Exception {
+        YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
+        stateService.ensureAtLeastOneView();
+
+        YamlWorkspacePanel panel = runOnEdt(() -> new YamlWorkspacePanel(
+                stateService,
+                parserService,
+                formatterService,
+                (views, parent) -> null,
+                message -> {
+                },
+                (title, leftName, rightName, leftText, rightText) -> {
+                },
+                () -> {
+                }
+        ));
+
+        assertNotNull(findDescendant(panel.getTypeTabsPanel(), JLabel.class, "JSON"));
+    }
+
+    @Test
     public void testWorkspacePanelDeletingLastViewDoesNothing() throws Exception {
         YamlWorkspaceStateService stateService = new YamlWorkspaceStateService();
         stateService.ensureAtLeastOneView();
@@ -378,7 +459,7 @@ public class YamlWorkspacePanelTest {
         ));
 
         assertNotNull(panel.getAddViewButton());
-        assertEquals(2, panel.getToolWindowTitleActions().length);
+        assertEquals(3, panel.getToolWindowTitleActions().length);
     }
 
     @Test

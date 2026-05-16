@@ -15,12 +15,14 @@ import com.intellij.openapi.editor.markup.RangeHighlighter;
 import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.Project;
+import com.intellij.json.JsonFileType;
+import com.intellij.lang.properties.PropertiesFileType;
 import com.intellij.ui.EditorTextField;
+import com.muyan.yamlassistant.services.JsonValidatorService;
 import com.muyan.yamlassistant.services.PropertiesValidatorService;
 import com.muyan.yamlassistant.services.YamlParserService;
 import com.muyan.yamlassistant.workspace.YamlViewState;
 import com.muyan.yamlassistant.workspace.WorkspaceContentType;
-import com.intellij.lang.properties.PropertiesFileType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.yaml.YAMLFileType;
 
@@ -48,6 +50,8 @@ public class YamlViewTabPanel {
     private final YamlViewState viewState;
     private final YamlParserService parserService;
     private final PropertiesValidatorService propertiesValidatorService;
+    private final JsonValidatorService jsonValidatorService;
+    private final boolean showLineNumbers;
     private RangeHighlighter errorHighlighter;
     private final Consumer<String> onContentChanged;
 
@@ -55,10 +59,20 @@ public class YamlViewTabPanel {
                             Project project,
                             YamlParserService parserService,
                             Consumer<String> onContentChanged) {
+        this(viewState, project, parserService, true, onContentChanged);
+    }
+
+    public YamlViewTabPanel(YamlViewState viewState,
+                            Project project,
+                            YamlParserService parserService,
+                            boolean showLineNumbers,
+                            Consumer<String> onContentChanged) {
         this.viewState = viewState;
         this.project = project;
         this.parserService = parserService;
         this.propertiesValidatorService = new PropertiesValidatorService();
+        this.jsonValidatorService = new JsonValidatorService();
+        this.showLineNumbers = showLineNumbers;
         this.onContentChanged = onContentChanged;
 
         mainPanel = new JPanel(new BorderLayout());
@@ -137,10 +151,15 @@ public class YamlViewTabPanel {
             editor.setHorizontalScrollbarVisible(false);
             editor.setVerticalScrollbarVisible(true);
             editor.setOneLineMode(false);
-            editor.getSettings().setLineMarkerAreaShown(false);
-            editor.getSettings().setFoldingOutlineShown(false);
-            editor.getSettings().setAdditionalColumnsCount(0);
-            editor.getSettings().setAdditionalLinesCount(0);
+
+            // Keep the workspace editor visually closer to a normal IDEA file editor.
+            editor.getSettings().setLineNumbersShown(showLineNumbers);
+            editor.getSettings().setLineMarkerAreaShown(showLineNumbers);
+            editor.getSettings().setFoldingOutlineShown(true);
+            editor.getSettings().setIndentGuidesShown(true);
+            editor.getSettings().setCaretRowShown(true);
+            editor.getSettings().setAdditionalColumnsCount(2);
+            editor.getSettings().setAdditionalLinesCount(1);
         });
     }
 
@@ -243,17 +262,30 @@ public class YamlViewTabPanel {
         if (viewState.getContentType() == WorkspaceContentType.PROPERTIES) {
             return propertiesValidatorService.validate(content);
         }
+        if (viewState.getContentType() == WorkspaceContentType.JSON) {
+            return jsonValidatorService.validate(content);
+        }
         return parserService.validate(content);
     }
 
     private String getValidationErrorLabel() {
-        return viewState.getContentType() == WorkspaceContentType.PROPERTIES ? "Properties error" : "YAML error";
+        if (viewState.getContentType() == WorkspaceContentType.PROPERTIES) {
+            return "Properties error";
+        }
+        if (viewState.getContentType() == WorkspaceContentType.JSON) {
+            return "JSON error";
+        }
+        return "YAML error";
     }
 
     private FileType getFileType() {
-        return viewState.getContentType() == WorkspaceContentType.PROPERTIES
-                ? PropertiesFileType.INSTANCE
-                : YAMLFileType.YML;
+        if (viewState.getContentType() == WorkspaceContentType.PROPERTIES) {
+            return PropertiesFileType.INSTANCE;
+        }
+        if (viewState.getContentType() == WorkspaceContentType.JSON) {
+            return JsonFileType.INSTANCE;
+        }
+        return YAMLFileType.YML;
     }
 
     private void updateErrorHighlight(String validation) {
@@ -376,6 +408,18 @@ public class YamlViewTabPanel {
 
     JPanel getStatusPanel() {
         return statusPanel;
+    }
+
+    boolean isLineNumbersShown() {
+        if (editorField == null) {
+            return showLineNumbers;
+        }
+
+        EditorEx editor = editorField.getEditor(false);
+        if (editor == null) {
+            return showLineNumbers;
+        }
+        return editor.getSettings().isLineNumbersShown();
     }
 
     private String getContent() {
